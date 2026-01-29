@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Phone, Lock, LogIn, Trophy } from 'lucide-react';
+import { Phone, Lock, LogIn, Trophy, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -10,19 +10,29 @@ const LoginPage = () => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({ phone: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    setError('');
     setLoading(true);
+    
     try {
       await login(formData.phone, formData.password);
       toast.success('Connexion réussie !');
       navigate('/');
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Erreur de connexion');
+    } catch (err) {
+      console.error('Login error:', err);
+      const errorMessage = err.response?.data?.error || 'Identifiants incorrects';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
+    
+    return false;
   };
 
   return (
@@ -38,6 +48,17 @@ const LoginPage = () => {
             <h1 className="font-display text-4xl gradient-text tracking-wider">Connexion</h1>
             <p className="text-gray-400 mt-2">Accédez à votre compte de pronostics</p>
           </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center space-x-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </motion.div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
