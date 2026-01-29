@@ -2,21 +2,37 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://fotball-backend.onrender.com/api';
 
-const api = axios.create({ baseURL: API_URL, headers: { 'Content-Type': 'application/json' } });
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
+// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
+// Handle responses - DON'T redirect on login/register errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only redirect on 401 if it's NOT a login/register request
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/connexion';
+      const url = error.config?.url || '';
+      const isAuthRequest = url.includes('/auth/login') || url.includes('/auth/register');
+      
+      // Don't redirect for login/register failures
+      if (!isAuthRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/connexion';
+      }
     }
     return Promise.reject(error);
   }
@@ -51,7 +67,9 @@ export const predictionsAPI = {
   makePrediction: (data) => api.post('/predictions', data),
 };
 
-export const leaderboardAPI = { getAll: () => api.get('/leaderboard') };
+export const leaderboardAPI = {
+  getAll: () => api.get('/leaderboard'),
+};
 
 export const scoringAPI = {
   getRules: () => api.get('/scoring-rules'),
