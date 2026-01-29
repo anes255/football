@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 
 // Layout
 import Navbar from './components/Navbar';
+import AdminLayout from './components/AdminLayout';
 
 // Public Pages
 import HomePage from './pages/HomePage';
@@ -16,13 +17,13 @@ import TournamentsPage from './pages/TournamentsPage';
 import TournamentDetailPage from './pages/TournamentDetailPage';
 
 // Admin Pages
+import AdminTournaments from './pages/admin/AdminTournaments';
 import AdminTeams from './pages/admin/AdminTeams';
 import AdminMatches from './pages/admin/AdminMatches';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminSettings from './pages/admin/AdminSettings';
-import AdminTournaments from './pages/admin/AdminTournaments';
 
-// Protected Route Component
+// Route Guards
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -43,39 +44,25 @@ function App() {
             <Route path="/tournois" element={<TournamentsPage />} />
             <Route path="/tournois/:id" element={<TournamentDetailPage />} />
             
-            {/* Protected Routes (logged in users) */}
+            {/* Protected Routes */}
             <Route path="/profil" element={
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
             } />
             
-            {/* Admin Routes */}
-            <Route path="/admin/tournois" element={
+            {/* Admin Routes with Sidebar Layout */}
+            <Route path="/admin" element={
               <AdminRoute>
-                <AdminTournaments />
+                <AdminLayout />
               </AdminRoute>
-            } />
-            <Route path="/admin/equipes" element={
-              <AdminRoute>
-                <AdminTeams />
-              </AdminRoute>
-            } />
-            <Route path="/admin/matchs" element={
-              <AdminRoute>
-                <AdminMatches />
-              </AdminRoute>
-            } />
-            <Route path="/admin/utilisateurs" element={
-              <AdminRoute>
-                <AdminUsers />
-              </AdminRoute>
-            } />
-            <Route path="/admin/parametres" element={
-              <AdminRoute>
-                <AdminSettings />
-              </AdminRoute>
-            } />
+            }>
+              <Route path="tournois" element={<AdminTournaments />} />
+              <Route path="equipes" element={<AdminTeams />} />
+              <Route path="matchs" element={<AdminMatches />} />
+              <Route path="utilisateurs" element={<AdminUsers />} />
+              <Route path="parametres" element={<AdminSettings />} />
+            </Route>
           </Routes>
           
           <Toaster 
