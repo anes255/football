@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Plus, Edit, Trash2, Trophy, X, Check, Clock } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Trophy, X, Check } from 'lucide-react';
 import { matchesAPI, teamsAPI, tournamentsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -82,7 +82,7 @@ const AdminMatches = () => {
       setShowResultModal(false);
       fetchData();
     } catch (error) {
-      toast.error('Erreur lors de l\'enregistrement');
+      toast.error('Erreur');
     }
   };
 
@@ -113,23 +113,13 @@ const AdminMatches = () => {
 
   const openResultModal = (match) => {
     setSelectedMatch(match);
-    setResultData({
-      team1_score: match.team1_score || 0,
-      team2_score: match.team2_score || 0
-    });
+    setResultData({ team1_score: match.team1_score || 0, team2_score: match.team2_score || 0 });
     setShowResultModal(true);
   };
 
   const resetForm = () => {
     setEditingMatch(null);
-    setFormData({
-      tournament_id: '',
-      team1_id: '',
-      team2_id: '',
-      match_date: '',
-      match_time: '',
-      stage: 'Groupes'
-    });
+    setFormData({ tournament_id: '', team1_id: '', team2_id: '', match_date: '', match_time: '', stage: 'Groupes' });
   };
 
   const renderFlag = (flagUrl, teamName) => {
@@ -162,7 +152,7 @@ const AdminMatches = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 px-4 pb-8">
+    <div className="p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -173,7 +163,7 @@ const AdminMatches = () => {
             <select
               value={filterTournament}
               onChange={(e) => setFilterTournament(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white"
+              className="bg-gray-700 border border-gray-600 rounded-xl py-2 px-4 text-white"
             >
               <option value="">Tous les tournois</option>
               {tournaments.map(t => (
@@ -187,7 +177,6 @@ const AdminMatches = () => {
           </div>
         </div>
 
-        {/* Matches List */}
         <div className="space-y-4">
           {filteredMatches.length === 0 ? (
             <div className="card text-center py-12">
@@ -198,62 +187,36 @@ const AdminMatches = () => {
             filteredMatches.map((match) => {
               const status = getMatchStatus(match);
               return (
-                <motion.div
-                  key={match.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="card"
-                >
+                <motion.div key={match.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
                   <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-center space-x-6 flex-1">
-                      {/* Team 1 */}
                       <div className="flex items-center space-x-2 min-w-[120px] justify-end">
                         <span className="text-white font-semibold">{match.team1_name}</span>
                         {renderFlag(match.team1_flag, match.team1_name)}
                       </div>
-
-                      {/* Score or Time */}
                       <div className="text-center min-w-[100px]">
                         {match.status === 'completed' ? (
-                          <div className="text-2xl font-bold text-white">
-                            {match.team1_score} - {match.team2_score}
-                          </div>
+                          <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
                         ) : (
                           <div className="text-primary-400 font-semibold">
                             {new Date(match.match_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         )}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {new Date(match.match_date).toLocaleDateString('fr-FR')}
-                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{new Date(match.match_date).toLocaleDateString('fr-FR')}</div>
                       </div>
-
-                      {/* Team 2 */}
                       <div className="flex items-center space-x-2 min-w-[120px]">
                         {renderFlag(match.team2_flag, match.team2_name)}
                         <span className="text-white font-semibold">{match.team2_name}</span>
                       </div>
                     </div>
-
                     <div className="flex items-center space-x-3">
                       {match.tournament_name && (
-                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
-                          {match.tournament_name}
-                        </span>
+                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{match.tournament_name}</span>
                       )}
-                      <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">
-                        {match.stage}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${status.color}`}>
-                        {status.text}
-                      </span>
-                      
+                      <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">{match.stage}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${status.color}`}>{status.text}</span>
                       {match.status !== 'completed' && (
-                        <button
-                          onClick={() => openResultModal(match)}
-                          className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
-                          title="Entrer le résultat"
-                        >
+                        <button onClick={() => openResultModal(match)} className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30">
                           <Trophy className="w-5 h-5" />
                         </button>
                       )}
@@ -271,173 +234,92 @@ const AdminMatches = () => {
           )}
         </div>
 
-        {/* Create/Edit Match Modal */}
+        {/* Create/Edit Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gray-800 rounded-2xl p-6 w-full max-w-lg"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-gray-800 rounded-2xl p-6 w-full max-w-lg">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">
-                  {editingMatch ? 'Modifier le match' : 'Nouveau match'}
-                </h2>
-                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
-                  <X className="w-6 h-6" />
-                </button>
+                <h2 className="text-2xl font-bold text-white">{editingMatch ? 'Modifier le match' : 'Nouveau match'}</h2>
+                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="w-6 h-6" /></button>
               </div>
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-300 mb-2">Tournoi</label>
-                  <select
-                    value={formData.tournament_id}
-                    onChange={(e) => setFormData({ ...formData, tournament_id: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                  >
+                  <select value={formData.tournament_id} onChange={(e) => setFormData({ ...formData, tournament_id: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white">
                     <option value="">Aucun tournoi</option>
-                    {tournaments.filter(t => t.is_active).map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
+                    {tournaments.filter(t => t.is_active).map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
                   </select>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">Équipe 1 *</label>
-                    <select
-                      value={formData.team1_id}
-                      onChange={(e) => setFormData({ ...formData, team1_id: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                      required
-                    >
+                    <select value={formData.team1_id} onChange={(e) => setFormData({ ...formData, team1_id: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" required>
                       <option value="">Sélectionner</option>
-                      {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
+                      {teams.map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">Équipe 2 *</label>
-                    <select
-                      value={formData.team2_id}
-                      onChange={(e) => setFormData({ ...formData, team2_id: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                      required
-                    >
+                    <select value={formData.team2_id} onChange={(e) => setFormData({ ...formData, team2_id: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" required>
                       <option value="">Sélectionner</option>
-                      {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
+                      {teams.map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
                     </select>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">Date *</label>
-                    <input
-                      type="date"
-                      value={formData.match_date}
-                      onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                      required
-                    />
+                    <input type="date" value={formData.match_date} onChange={(e) => setFormData({ ...formData, match_date: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" required />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">Heure *</label>
-                    <input
-                      type="time"
-                      value={formData.match_time}
-                      onChange={(e) => setFormData({ ...formData, match_time: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                      required
-                    />
+                    <input type="time" value={formData.match_time} onChange={(e) => setFormData({ ...formData, match_time: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" required />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm text-gray-300 mb-2">Phase</label>
-                  <select
-                    value={formData.stage}
-                    onChange={(e) => setFormData({ ...formData, stage: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                  >
-                    {stages.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                  <select value={formData.stage} onChange={(e) => setFormData({ ...formData, stage: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white">
+                    {stages.map(s => (<option key={s} value={s}>{s}</option>))}
                   </select>
                 </div>
-
                 <div className="flex space-x-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn-primary flex-1">
-                    {editingMatch ? 'Modifier' : 'Créer'}
-                  </button>
+                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">Annuler</button>
+                  <button type="submit" className="btn-primary flex-1">{editingMatch ? 'Modifier' : 'Créer'}</button>
                 </div>
               </form>
             </motion.div>
           </div>
         )}
 
-        {/* Set Result Modal */}
+        {/* Result Modal */}
         {showResultModal && selectedMatch && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gray-800 rounded-2xl p-6 w-full max-w-md"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-gray-800 rounded-2xl p-6 w-full max-w-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-white">Entrer le résultat</h2>
-                <button onClick={() => setShowResultModal(false)} className="text-gray-400 hover:text-white">
-                  <X className="w-6 h-6" />
-                </button>
+                <button onClick={() => setShowResultModal(false)} className="text-gray-400 hover:text-white"><X className="w-6 h-6" /></button>
               </div>
-
               <form onSubmit={handleSetResult} className="space-y-6">
                 <div className="flex items-center justify-center space-x-6">
                   <div className="text-center">
                     {renderFlag(selectedMatch.team1_flag, selectedMatch.team1_name)}
                     <p className="text-white font-semibold mt-2">{selectedMatch.team1_name}</p>
-                    <input
-                      type="number"
-                      min="0"
-                      value={resultData.team1_score}
-                      onChange={(e) => setResultData({ ...resultData, team1_score: parseInt(e.target.value) || 0 })}
-                      className="w-20 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white text-center text-2xl mt-3"
-                    />
+                    <input type="number" min="0" value={resultData.team1_score} onChange={(e) => setResultData({ ...resultData, team1_score: parseInt(e.target.value) || 0 })} className="w-20 bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white text-center text-2xl mt-3" />
                   </div>
                   <span className="text-3xl text-gray-400">-</span>
                   <div className="text-center">
                     {renderFlag(selectedMatch.team2_flag, selectedMatch.team2_name)}
                     <p className="text-white font-semibold mt-2">{selectedMatch.team2_name}</p>
-                    <input
-                      type="number"
-                      min="0"
-                      value={resultData.team2_score}
-                      onChange={(e) => setResultData({ ...resultData, team2_score: parseInt(e.target.value) || 0 })}
-                      className="w-20 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white text-center text-2xl mt-3"
-                    />
+                    <input type="number" min="0" value={resultData.team2_score} onChange={(e) => setResultData({ ...resultData, team2_score: parseInt(e.target.value) || 0 })} className="w-20 bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white text-center text-2xl mt-3" />
                   </div>
                 </div>
-
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                  <p className="text-yellow-400 text-sm text-center">
-                    ⚠️ Cette action calculera automatiquement les points de tous les pronostics
-                  </p>
+                  <p className="text-yellow-400 text-sm text-center">⚠️ Cette action calculera automatiquement les points</p>
                 </div>
-
                 <div className="flex space-x-3">
-                  <button type="button" onClick={() => setShowResultModal(false)} className="btn-secondary flex-1">
-                    Annuler
-                  </button>
+                  <button type="button" onClick={() => setShowResultModal(false)} className="btn-secondary flex-1">Annuler</button>
                   <button type="submit" className="btn-primary flex-1 flex items-center justify-center space-x-2">
-                    <Check className="w-5 h-5" />
-                    <span>Valider</span>
+                    <Check className="w-5 h-5" /><span>Valider</span>
                   </button>
                 </div>
               </form>
