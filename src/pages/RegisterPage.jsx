@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Phone, Lock, Trophy, UserPlus, Flag } from 'lucide-react';
+import { Phone, Lock, User, UserPlus, Trophy, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { teamsAPI } from '../api';
 import toast from 'react-hot-toast';
@@ -18,47 +18,70 @@ const RegisterPage = () => {
     predicted_winner_id: ''
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    teamsAPI.getAll()
-      .then(res => setTeams(res.data))
-      .catch(err => console.error('Error loading teams:', err));
+    fetchTeams();
   }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const res = await teamsAPI.getAll();
+      setTeams(res.data);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     
+    setError('');
+
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      setError('Les mots de passe ne correspondent pas');
       return;
     }
-    
+
     if (formData.password.length < 6) {
-      toast.error('Mot de passe: 6 caractères minimum');
+      setError('Le mot de passe doit contenir au moins 6 caractères');
       return;
     }
 
     setLoading(true);
+    
     try {
       await register({
         name: formData.name,
         phone: formData.phone,
         password: formData.password,
-        predicted_winner_id: formData.predicted_winner_id ? parseInt(formData.predicted_winner_id) : null
+        predicted_winner_id: formData.predicted_winner_id || null
       });
       toast.success('Inscription réussie !');
       navigate('/');
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Erreur lors de l\'inscription');
+    } catch (err) {
+      console.error('Register error:', err);
+      const errorMessage = err.response?.data?.error || 'Erreur lors de l\'inscription';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
+    
+    return false;
   };
 
-  const selectedTeam = teams.find(t => t.id === parseInt(formData.predicted_winner_id));
+  const renderFlag = (flagUrl) => {
+    if (!flagUrl) return null;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
+      return <img src={flagUrl} alt="" className="w-6 h-4 object-cover rounded inline-block mr-2" />;
+    }
+    return <span className="mr-2">{flagUrl}</span>;
+  };
 
   return (
-    <div className="min-h-screen pt-20 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen pt-20 flex items-center justify-center px-4 pb-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -68,13 +91,25 @@ const RegisterPage = () => {
           <div className="text-center mb-8">
             <Trophy className="w-16 h-16 text-primary-500 mx-auto mb-4" />
             <h1 className="font-display text-4xl gradient-text tracking-wider">Inscription</h1>
-            <p className="text-gray-400 mt-2">Créez votre compte</p>
+            <p className="text-gray-400 mt-2">Créez votre compte et commencez à pronostiquer</p>
           </div>
 
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center space-x-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Nom complet */}
             <div>
-              <label className="block text-sm text-gray-300 mb-2">Nom complet</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Nom complet
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -88,9 +123,10 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            {/* Téléphone */}
             <div>
-              <label className="block text-sm text-gray-300 mb-2">Téléphone</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Numéro de téléphone
+              </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -104,9 +140,10 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            {/* Mot de passe */}
             <div>
-              <label className="block text-sm text-gray-300 mb-2">Mot de passe</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Mot de passe
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -120,9 +157,10 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            {/* Confirmer mot de passe */}
             <div>
-              <label className="block text-sm text-gray-300 mb-2">Confirmer le mot de passe</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Confirmer le mot de passe
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -136,42 +174,33 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            {/* Vainqueur prédit */}
-            <div>
-              <label className="block text-sm text-gray-300 mb-2">
-                <Flag className="inline w-4 h-4 mr-1" />
-                Vainqueur prédit (optionnel)
-              </label>
-              <select
-                value={formData.predicted_winner_id}
-                onChange={(e) => setFormData({ ...formData, predicted_winner_id: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="" className="bg-gray-800">Sélectionner une équipe</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.id} className="bg-gray-800">
-                    {team.flag_url && !team.flag_url.startsWith('data:') && !team.flag_url.startsWith('http') ? team.flag_url + ' ' : ''}
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-              {selectedTeam && (
-                <div className="mt-2 p-2 bg-white/5 rounded-lg flex items-center space-x-2">
-                  {selectedTeam.flag_url && (selectedTeam.flag_url.startsWith('data:') || selectedTeam.flag_url.startsWith('http')) ? (
-                    <img src={selectedTeam.flag_url} alt={selectedTeam.name} className="w-6 h-4 object-cover rounded" />
-                  ) : (
-                    <span className="text-lg">{selectedTeam.flag_url || '🏳️'}</span>
-                  )}
-                  <span className="text-white text-sm">{selectedTeam.name}</span>
-                </div>
-              )}
-              <p className="text-xs text-gray-500 mt-1">Points bonus si votre équipe gagne le tournoi !</p>
-            </div>
+            {teams.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Équipe gagnante (optionnel)
+                </label>
+                <select
+                  value={formData.predicted_winner_id}
+                  onChange={(e) => setFormData({ ...formData, predicted_winner_id: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="">Sélectionnez une équipe</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Pronostiquez le vainqueur du tournoi pour des points bonus !
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full flex items-center justify-center space-x-2"
+              className="btn-primary w-full flex items-center justify-center space-x-2 mt-6"
             >
               {loading ? (
                 <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
@@ -185,7 +214,7 @@ const RegisterPage = () => {
           </form>
 
           <p className="text-center text-gray-400 mt-6">
-            Déjà inscrit ?{' '}
+            Déjà un compte ?{' '}
             <Link to="/connexion" className="text-primary-500 hover:text-primary-400 font-semibold">
               Se connecter
             </Link>
