@@ -15,6 +15,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import TournamentsPage from './pages/TournamentsPage';
 import TournamentDetailPage from './pages/TournamentDetailPage';
+import TeamPage from './pages/TeamPage';
 
 // Admin Pages
 import AdminTournaments from './pages/admin/AdminTournaments';
@@ -43,6 +44,7 @@ function App() {
             <Route path="/classement" element={<LeaderboardPage />} />
             <Route path="/tournois" element={<TournamentsPage />} />
             <Route path="/tournois/:id" element={<TournamentDetailPage />} />
+            <Route path="/equipe/:id" element={<TeamPage />} />
             
             {/* Protected Routes */}
             <Route path="/profil" element={
@@ -51,7 +53,7 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Admin Routes with Sidebar Layout */}
+            {/* Admin Routes */}
             <Route path="/admin" element={
               <AdminRoute>
                 <AdminLayout />
