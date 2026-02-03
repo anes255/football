@@ -9,9 +9,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
@@ -20,8 +18,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
-      const isAuthRequest = url.includes('/auth/login') || url.includes('/auth/register');
-      if (!isAuthRequest) {
+      if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/connexion';
@@ -51,16 +48,20 @@ export const tournamentsAPI = {
   getActive: () => api.get('/tournaments/active'),
   getById: (id) => api.get(`/tournaments/${id}`),
   getMatches: (id) => api.get(`/tournaments/${id}/matches`),
+  getMatchesVisible: (id) => api.get(`/matches/tournament/${id}/visible`),
   create: (data) => api.post('/tournaments', data),
   update: (id, data) => api.put(`/tournaments/${id}`, data),
   delete: (id) => api.delete(`/tournaments/${id}`),
 };
 
 export const matchesAPI = {
-  getAll: () => api.get('/matches'),
+  getAll: () => api.get('/matches'),  // Admin only
+  getVisible: () => api.get('/matches/visible'),  // Users - 24h filter
   getUpcoming: () => api.get('/matches/upcoming'),
   getById: (id) => api.get(`/matches/${id}`),
-  getByTournament: (tournamentId) => api.get(`/matches/tournament/${tournamentId}`),
+  getByTeam: (teamId) => api.get(`/matches/team/${teamId}`),  // Team matches
+  getByTournament: (id) => api.get(`/matches/tournament/${id}`),
+  getByTournamentVisible: (id) => api.get(`/matches/tournament/${id}/visible`),
   canPredict: (id) => api.get(`/matches/${id}/can-predict`),
   create: (data) => api.post('/matches', data),
   update: (id, data) => api.put(`/matches/${id}`, data),
@@ -80,12 +81,10 @@ export const leaderboardAPI = {
 
 export const scoringAPI = {
   getRules: () => api.get('/scoring-rules'),
-  updateRules: (data) => api.put('/admin/scoring-rules', data),
 };
 
 export const settingsAPI = {
   getAll: () => api.get('/settings'),
-  update: (data) => api.put('/admin/settings', data),
 };
 
 export const adminAPI = {
@@ -95,7 +94,12 @@ export const adminAPI = {
   updateScoringRules: (data) => api.put('/admin/scoring-rules', data),
   updateSettings: (data) => api.put('/admin/settings', data),
   awardTournamentWinner: (data) => api.post('/admin/award-tournament-winner', data),
-  getLeaderboard: () => api.get('/admin/leaderboard'),
+};
+
+// Algerian phone number validation (10 digits, starts with 05, 06, or 07)
+export const validateAlgerianPhone = (phone) => {
+  const cleaned = phone.replace(/[\s-]/g, '');
+  return /^(05|06|07)[0-9]{8}$/.test(cleaned);
 };
 
 export default api;
