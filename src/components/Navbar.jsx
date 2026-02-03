@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Globe, Menu, X, Home, Calendar, Trophy, Users, 
+  Globe, Menu, X, Home, Calendar, Trophy, Users, Flag,
   LogIn, UserPlus, LogOut, User, Settings, Award
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -23,15 +23,8 @@ const Navbar = () => {
     { path: '/', label: 'Accueil', icon: Home },
     { path: '/tournois', label: 'Tournois', icon: Trophy },
     { path: '/matchs', label: 'Matchs', icon: Calendar },
+    { path: '/equipes', label: 'Équipes', icon: Flag },
     { path: '/classement', label: 'Classement', icon: Award },
-  ];
-
-  const adminLinks = [
-    { path: '/admin/tournois', label: 'Tournois', icon: Trophy },
-    { path: '/admin/equipes', label: 'Équipes', icon: Users },
-    { path: '/admin/matchs', label: 'Matchs', icon: Calendar },
-    { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: User },
-    { path: '/admin/parametres', label: 'Paramètres', icon: Settings },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -147,23 +140,16 @@ const Navbar = () => {
               {user && user.is_admin && (
                 <>
                   <div className="border-t border-white/10 my-3 pt-3">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider px-4 mb-2">Administration</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider px-4 mb-2">Admin</p>
                   </div>
-                  {adminLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      onClick={() => setIsOpen(false)}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg ${
-                        isActive(link.path)
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'text-yellow-400/70 hover:text-yellow-400 hover:bg-yellow-500/10'
-                      }`}
-                    >
-                      <link.icon className="w-5 h-5" />
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
+                  <Link
+                    to="/admin/tournois"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-lg text-yellow-400 hover:bg-yellow-500/10"
+                  >
+                    <Settings className="w-5 h-5" />
+                    <span>Administration</span>
+                  </Link>
                 </>
               )}
 
