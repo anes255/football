@@ -1,128 +1,263 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Globe, Calendar, Users, TrendingUp, ChevronRight, Star } from 'lucide-react';
-import { matchesAPI, leaderboardAPI } from '../api';
-import { useAuth } from '../context/AuthContext';
+import { Trophy, Calendar, Users, ChevronRight, Award, Clock, Flag } from 'lucide-react';
+import { tournamentsAPI, matchesAPI, leaderboardAPI, teamsAPI } from '../api';
 
 const HomePage = () => {
-  const { isAuthenticated, user } = useAuth();
+  const [tournaments, setTournaments] = useState([]);
   const [upcomingMatches, setUpcomingMatches] = useState([]);
-  const [topUsers, setTopUsers] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
     try {
-      const [matchesRes, leaderboardRes] = await Promise.all([matchesAPI.getAll(), leaderboardAPI.getAll()]);
+      const [tourRes, matchesRes, leaderRes, teamsRes] = await Promise.all([
+        tournamentsAPI.getActive(),
+        matchesAPI.getVisible(),
+        leaderboardAPI.getAll(),
+        teamsAPI.getAll()
+      ]);
+      setTournaments(tourRes.data);
       setUpcomingMatches(matchesRes.data.filter(m => m.status === 'upcoming').slice(0, 3));
-      setTopUsers(leaderboardRes.data.slice(0, 5));
-    } catch (error) { console.error(error); }
-    finally { setLoading(false); }
+      setLeaderboard(leaderRes.data.slice(0, 5));
+      setTeams(teamsRes.data);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   const renderFlag = (flagUrl, name) => {
-    if (flagUrl && (flagUrl.startsWith('data:') || flagUrl.startsWith('http'))) {
-      return <img src={flagUrl} alt={name} className="w-full h-full object-cover" />;
+    if (!flagUrl) return <span className="text-2xl">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
+      return <img src={flagUrl} alt={name} className="w-8 h-6 object-cover rounded" />;
     }
-    return <span className="text-2xl">{flagUrl || '🏳️'}</span>;
+    return <span className="text-2xl">{flagUrl}</span>;
   };
 
+  const getTimeRemaining = (matchDate) => {
+    const diff = new Date(matchDate) - new Date();
+    if (diff <= 0) return null;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
+    return `${hours}h ${minutes}m`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen pt-20 pb-8">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 via-transparent to-secondary-600/20" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="inline-block mb-6">
-              <Globe className="w-20 h-20 text-primary-500 mx-auto" />
-            </motion.div>
-            <h1 className="font-display text-5xl md:text-7xl tracking-wider mb-4"><span className="gradient-text">PREDICTION</span><br /><span className="text-white">WORLD</span></h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">Prédisez les résultats des matchs et montrez que vous êtes le meilleur pronostiqueur !</p>
-            {!isAuthenticated ? (
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link to="/inscription" className="btn-primary text-lg px-8 py-3">Commencer maintenant<ChevronRight className="inline w-5 h-5 ml-2" /></Link>
-                <Link to="/connexion" className="text-gray-300 hover:text-white transition-colors">Déjà inscrit ? Se connecter</Link>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link to="/matchs" className="btn-primary text-lg px-8 py-3">Faire mes pronostics<ChevronRight className="inline w-5 h-5 ml-2" /></Link>
-                <p className="text-gray-300">Bienvenue, <span className="text-primary-500 font-semibold">{user?.name}</span> !</p>
-              </div>
-            )}
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[{ icon: Calendar, label: 'Matchs à venir', value: upcomingMatches.length, color: 'primary' }, { icon: Users, label: 'Participants', value: topUsers.length + '+', color: 'secondary' }, { icon: TrendingUp, label: 'Pronostics', value: '100+', color: 'primary' }].map((stat, i) => (
-            <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="card flex items-center space-x-4">
-              <div className={`p-4 rounded-xl bg-${stat.color}-500/20`}><stat.icon className={`w-8 h-8 text-${stat.color}-500`} /></div>
-              <div><p className="text-3xl font-bold text-white">{stat.value}</p><p className="text-gray-400">{stat.label}</p></div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-3xl text-white tracking-wider">Prochains Matchs</h2>
-          <Link to="/matchs" className="text-primary-500 hover:text-primary-400 transition-colors flex items-center">Voir tout<ChevronRight className="w-5 h-5 ml-1" /></Link>
-        </div>
-        {loading ? <div className="text-center py-12"><div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto" /></div> : upcomingMatches.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {upcomingMatches.map((match, i) => (
-              <motion.div key={match.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="card hover:border-primary-500/50">
-                <div className="text-center">
-                  <p className="text-sm text-gray-400 mb-4">{formatDate(match.match_date)}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 text-center">
-                      <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
-                        {renderFlag(match.team1_flag, match.team1_name)}
-                      </div>
-                      <p className="font-semibold text-white text-sm">{match.team1_name}</p>
-                    </div>
-                    <div className="px-4"><span className="text-2xl font-display text-gray-500">VS</span></div>
-                    <div className="flex-1 text-center">
-                      <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
-                        {renderFlag(match.team2_flag, match.team2_name)}
-                      </div>
-                      <p className="font-semibold text-white text-sm">{match.team2_name}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-4">{match.stage}</p>
-                </div>
-              </motion.div>
-            ))}
+    <div className="min-h-screen pt-20 px-4 pb-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="font-display text-5xl md:text-6xl gradient-text mb-4">
+            Prediction World
+          </h1>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Faites vos pronostics sur les matchs de football et affrontez vos amis !
+          </p>
+          <div className="flex justify-center space-x-4 mt-6">
+            <Link to="/matchs" className="btn-primary">
+              Voir les matchs
+            </Link>
+            <Link to="/classement" className="btn-secondary">
+              Classement
+            </Link>
           </div>
-        ) : <div className="card text-center py-12"><Calendar className="w-16 h-16 text-gray-500 mx-auto mb-4" /><p className="text-gray-400">Aucun match à venir</p></div>}
-      </section>
+        </motion.div>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-3xl text-white tracking-wider">Top 5 Pronostiqueurs</h2>
-          <Link to="/classement" className="text-primary-500 hover:text-primary-400 transition-colors flex items-center">Classement complet<ChevronRight className="w-5 h-5 ml-1" /></Link>
-        </div>
-        <div className="card">
-          {topUsers.length > 0 ? (
-            <div className="space-y-4">
-              {topUsers.map((player, i) => (
-                <motion.div key={player.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className={`flex items-center justify-between p-4 rounded-xl ${i === 0 ? 'bg-primary-500/20 border border-primary-500/30' : 'bg-white/5'}`}>
+        {/* Tournaments Section */}
+        {tournaments.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-12"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
+                <Trophy className="w-6 h-6 text-primary-500" />
+                <span>Tournois Actifs</span>
+              </h2>
+              <Link to="/tournois" className="text-primary-400 hover:text-primary-300 flex items-center">
+                Voir tout <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tournaments.map((tournament) => (
+                <Link
+                  key={tournament.id}
+                  to={`/tournois/${tournament.id}`}
+                  className="card hover:border-primary-500/50 transition-all group"
+                >
                   <div className="flex items-center space-x-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${i === 0 ? 'bg-primary-500 text-dark-300' : i === 1 ? 'bg-gray-400 text-dark-300' : i === 2 ? 'bg-amber-700 text-white' : 'bg-white/10 text-gray-400'}`}>{i + 1}</div>
-                    <div><p className="font-semibold text-white flex items-center">{player.name}{i === 0 && <Star className="w-4 h-4 text-primary-500 ml-2 fill-primary-500" />}</p><p className="text-sm text-gray-400">{player.correct_predictions || 0} pronostics corrects</p></div>
+                    {tournament.logo_url ? (
+                      <img src={tournament.logo_url} alt={tournament.name} className="w-16 h-16 object-cover rounded-xl" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
+                        <Trophy className="w-8 h-8 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-white font-bold group-hover:text-primary-400 transition-colors">
+                        {tournament.name}
+                      </h3>
+                      <p className="text-sm text-gray-400">{tournament.match_count || 0} matchs</p>
+                      {tournament.start_date && (
+                        <p className="text-xs text-gray-500">
+                          {new Date(tournament.start_date).toLocaleDateString('fr-FR')}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-primary-400" />
                   </div>
-                  <div className="text-right"><p className="text-2xl font-bold gradient-text">{player.total_points || 0}</p><p className="text-sm text-gray-400">points</p></div>
-                </motion.div>
+                </Link>
               ))}
             </div>
-          ) : <div className="text-center py-8"><Users className="w-16 h-16 text-gray-500 mx-auto mb-4" /><p className="text-gray-400">Pas encore de participants</p></div>}
+          </motion.section>
+        )}
+
+        {/* Upcoming Matches */}
+        {upcomingMatches.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-12"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
+                <Calendar className="w-6 h-6 text-primary-500" />
+                <span>Prochains Matchs</span>
+              </h2>
+              <Link to="/matchs" className="text-primary-400 hover:text-primary-300 flex items-center">
+                Voir tout <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid gap-4">
+              {upcomingMatches.map((match) => (
+                <Link key={match.id} to="/matchs" className="card hover:border-primary-500/50 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="flex items-center space-x-2">
+                        {renderFlag(match.team1_flag, match.team1_name)}
+                        <span className="text-white font-semibold">{match.team1_name}</span>
+                      </div>
+                      <span className="text-gray-500">VS</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-white font-semibold">{match.team2_name}</span>
+                        {renderFlag(match.team2_flag, match.team2_name)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center space-x-1 text-primary-400">
+                        <Clock className="w-4 h-4" />
+                        <span className="text-sm font-semibold">{getTimeRemaining(match.match_date)}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {new Date(match.match_date).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Leaderboard Preview */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
+                <Award className="w-6 h-6 text-yellow-500" />
+                <span>Top Joueurs</span>
+              </h2>
+              <Link to="/classement" className="text-primary-400 hover:text-primary-300 flex items-center">
+                Voir tout <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="card">
+              {leaderboard.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">Aucun classement</p>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboard.map((user, index) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          index === 0 ? 'bg-yellow-500 text-black' :
+                          index === 1 ? 'bg-gray-400 text-black' :
+                          index === 2 ? 'bg-orange-600 text-white' :
+                          'bg-white/10 text-white'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <span className="text-white font-medium">{user.name}</span>
+                      </div>
+                      <span className="text-primary-400 font-bold">{user.total_points} pts</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.section>
+
+          {/* Teams Section */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
+                <Flag className="w-6 h-6 text-green-500" />
+                <span>Équipes</span>
+              </h2>
+            </div>
+            <div className="card max-h-[320px] overflow-y-auto">
+              {teams.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">Aucune équipe</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {teams.map((team) => (
+                    <Link
+                      key={team.id}
+                      to={`/equipe/${team.id}`}
+                      className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      {renderFlag(team.flag_url, team.name)}
+                      <span className="text-white text-sm truncate">{team.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.section>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
