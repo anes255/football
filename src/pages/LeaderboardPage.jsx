@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Award, TrendingUp, Target, Users } from 'lucide-react';
+import { Trophy, Medal, Award, Users } from 'lucide-react';
 import { leaderboardAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 
@@ -39,8 +39,6 @@ const LeaderboardPage = () => {
     return 'bg-white/5 border-white/10';
   };
 
-  const totalPoints = leaderboard.reduce((sum, u) => sum + (u.total_points || 0), 0);
-  const avgPoints = leaderboard.length > 0 ? (totalPoints / leaderboard.length).toFixed(1) : 0;
   const userRank = user ? leaderboard.findIndex(u => u.id === user.id) + 1 : null;
 
   if (loading) {
@@ -53,41 +51,18 @@ const LeaderboardPage = () => {
 
   return (
     <div className="min-h-screen pt-20 px-4 pb-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="font-display text-4xl gradient-text">Classement</h1>
+          <h1 className="text-3xl font-bold gradient-text mb-2">Classement</h1>
+          <p className="text-gray-400">{leaderboard.length} joueurs</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card text-center">
-            <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{leaderboard.length}</p>
-            <p className="text-sm text-gray-400">Joueurs</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card text-center">
-            <Target className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{leaderboard.reduce((sum, u) => sum + (u.total_predictions || 0), 0)}</p>
-            <p className="text-sm text-gray-400">Pronostics</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card text-center">
-            <TrendingUp className="w-8 h-8 text-primary-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{avgPoints}</p>
-            <p className="text-sm text-gray-400">Moyenne pts</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card text-center">
-            <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-white">{leaderboard[0]?.total_points || 0}</p>
-            <p className="text-sm text-gray-400">Top score</p>
-          </motion.div>
-        </div>
-
-        {/* Your Rank Banner */}
+        {/* Your Rank */}
         {user && userRank > 0 && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="card bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-primary-500/30 mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="card bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-primary-500/30 mb-6"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -99,29 +74,64 @@ const LeaderboardPage = () => {
                   <p className="text-sm text-gray-400">{user.name}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-primary-400">
-                  {leaderboard.find(u => u.id === user.id)?.total_points || 0} pts
-                </p>
-                <p className="text-sm text-gray-400">
-                  {leaderboard.find(u => u.id === user.id)?.correct_predictions || 0} bons pronos
-                </p>
+              <div className="text-2xl font-bold text-primary-400">
+                {leaderboard.find(u => u.id === user.id)?.total_points || 0} pts
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Leaderboard */}
+        {/* Podium for top 3 */}
+        {leaderboard.length >= 3 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex justify-center items-end space-x-4 mb-8"
+          >
+            {/* 2nd Place */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-gray-400 flex items-center justify-center">
+                <span className="text-2xl font-bold text-black">2</span>
+              </div>
+              <div className="bg-gray-400/20 rounded-t-lg px-4 py-6 h-24">
+                <p className="text-white font-semibold text-sm truncate max-w-[80px]">{leaderboard[1]?.name}</p>
+                <p className="text-gray-300 font-bold">{leaderboard[1]?.total_points || 0}</p>
+              </div>
+            </div>
+            
+            {/* 1st Place */}
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-yellow-500 flex items-center justify-center">
+                <Trophy className="w-10 h-10 text-black" />
+              </div>
+              <div className="bg-yellow-500/20 rounded-t-lg px-4 py-6 h-32">
+                <p className="text-white font-semibold truncate max-w-[80px]">{leaderboard[0]?.name}</p>
+                <p className="text-yellow-400 font-bold text-xl">{leaderboard[0]?.total_points || 0}</p>
+              </div>
+            </div>
+            
+            {/* 3rd Place */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-orange-500 flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">3</span>
+              </div>
+              <div className="bg-orange-500/20 rounded-t-lg px-4 py-6 h-20">
+                <p className="text-white font-semibold text-sm truncate max-w-[80px]">{leaderboard[2]?.name}</p>
+                <p className="text-orange-400 font-bold">{leaderboard[2]?.total_points || 0}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Full Leaderboard */}
         <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4">Classement complet</h2>
-          
           {leaderboard.length === 0 ? (
-            <div className="text-center py-8">
-              <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400">Aucun joueur inscrit</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {leaderboard.map((player, index) => (
                 <motion.div
                   key={player.id}
@@ -133,16 +143,13 @@ const LeaderboardPage = () => {
                   }`}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center w-8">
-                      {getRankIcon(index)}
-                    </div>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                    <div className="w-8 flex justify-center">{getRankIcon(index)}</div>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
                       index === 0 ? 'bg-yellow-500 text-black' :
                       index === 1 ? 'bg-gray-400 text-black' :
-                      index === 2 ? 'bg-orange-500 text-white' :
-                      'bg-white/10 text-white'
+                      index === 2 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white'
                     }`}>
-                      {player.name.charAt(0)}
+                      {player.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <p className="text-white font-semibold flex items-center space-x-2">
@@ -151,26 +158,15 @@ const LeaderboardPage = () => {
                           <span className="text-xs text-primary-400">(Vous)</span>
                         )}
                       </p>
-                      <p className="text-sm text-gray-400">
-                        {player.total_predictions || 0} pronos • {player.correct_predictions || 0} bons
-                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-xl font-bold ${
-                      index === 0 ? 'text-yellow-400' :
-                      index === 1 ? 'text-gray-300' :
-                      index === 2 ? 'text-orange-400' :
-                      'text-primary-400'
-                    }`}>
-                      {player.total_points} pts
-                    </p>
-                    {player.total_predictions > 0 && (
-                      <p className="text-xs text-gray-500">
-                        {((player.correct_predictions / player.total_predictions) * 100).toFixed(0)}% réussite
-                      </p>
-                    )}
-                  </div>
+                  <p className={`text-xl font-bold ${
+                    index === 0 ? 'text-yellow-400' :
+                    index === 1 ? 'text-gray-300' :
+                    index === 2 ? 'text-orange-400' : 'text-primary-400'
+                  }`}>
+                    {player.total_points || 0}
+                  </p>
                 </motion.div>
               ))}
             </div>
