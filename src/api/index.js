@@ -32,7 +32,6 @@ export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
   getProfile: () => api.get('/auth/profile'),
-  updateProfile: (data) => api.put('/auth/profile', data),
   verify: () => api.get('/auth/verify'),
 };
 
@@ -49,10 +48,6 @@ export const tournamentsAPI = {
   getActive: () => api.get('/tournaments/active'),
   getById: (id) => api.get(`/tournaments/${id}`),
   getMatches: (id) => api.get(`/tournaments/${id}/matches`),
-  getMatchesVisible: (id) => api.get(`/matches/tournament/${id}/visible`),
-  getTeams: (id) => api.get(`/tournaments/${id}/teams`),
-  getGroups: (id) => api.get(`/tournaments/${id}/groups`),
-  getFormats: () => api.get('/tournaments/formats'),
   create: (data) => api.post('/tournaments', data),
   update: (id, data) => api.put(`/tournaments/${id}`, data),
   delete: (id) => api.delete(`/tournaments/${id}`),
@@ -84,28 +79,12 @@ export const leaderboardAPI = {
   getUserPredictions: (userId) => api.get(`/leaderboard/user/${userId}`),
 };
 
-export const scoringAPI = {
-  getRules: () => api.get('/scoring-rules'),
-};
-
-export const settingsAPI = {
-  getAll: () => api.get('/settings'),
-};
-
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getScoringRules: () => api.get('/admin/scoring-rules'),
   updateScoringRules: (data) => api.put('/admin/scoring-rules', data),
-  getSettings: () => api.get('/admin/settings'),
-  updateSettings: (data) => api.put('/admin/settings', data),
-  awardTournamentWinner: (data) => api.post('/admin/award-tournament-winner', data),
-  getFormatOptions: () => api.get('/admin/tournament-formats'),
-  getTournamentTeams: (id) => api.get(`/admin/tournaments/${id}/teams`),
-  addTournamentTeam: (id, data) => api.post(`/admin/tournaments/${id}/teams`, data),
-  bulkAddTournamentTeams: (id, data) => api.post(`/admin/tournaments/${id}/teams/bulk`, data),
-  removeTournamentTeam: (tournamentId, teamId) => api.delete(`/admin/tournaments/${tournamentId}/teams/${teamId}`),
 };
 
 export const validateAlgerianPhone = (phone) => {
