@@ -1,33 +1,37 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Plus, Edit, Trash2, Calendar, X, Check, Image } from 'lucide-react';
-import { tournamentsAPI } from '../../api';
+import { Trophy, Plus, Edit, Trash2, Users, Save, X } from 'lucide-react';
+import { tournamentsAPI, teamsAPI, adminAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [formats, setFormats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingTournament, setEditingTournament] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [showGroupsModal, setShowGroupsModal] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    logo_url: '',
-    is_active: true
+    name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4'
   });
 
   useEffect(() => {
-    fetchTournaments();
+    fetchData();
   }, []);
 
-  const fetchTournaments = async () => {
+  const fetchData = async () => {
     try {
-      const res = await tournamentsAPI.getAll();
-      setTournaments(res.data);
+      const [tourRes, teamsRes, formatsRes] = await Promise.all([
+        tournamentsAPI.getAll(),
+        teamsAPI.getAll(),
+        tournamentsAPI.getFormats()
+      ]);
+      setTournaments(tourRes.data);
+      setTeams(teamsRes.data);
+      setFormats(formatsRes.data);
     } catch (error) {
-      toast.error('Erreur lors du chargement des tournois');
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
@@ -36,32 +40,34 @@ const AdminTournaments = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (editingTournament) {
-        await tournamentsAPI.update(editingTournament.id, formData);
+      if (editingId) {
+        await tournamentsAPI.update(editingId, formData);
         toast.success('Tournoi modifié');
       } else {
         await tournamentsAPI.create(formData);
         toast.success('Tournoi créé');
       }
-      setShowModal(false);
-      resetForm();
-      fetchTournaments();
+      setShowForm(false);
+      setEditingId(null);
+      setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4' });
+      fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Erreur');
+      toast.error('Erreur');
     }
   };
 
   const handleEdit = (tournament) => {
-    setEditingTournament(tournament);
     setFormData({
       name: tournament.name,
       description: tournament.description || '',
-      start_date: tournament.start_date ? tournament.start_date.split('T')[0] : '',
-      end_date: tournament.end_date ? tournament.end_date.split('T')[0] : '',
+      start_date: tournament.start_date?.split('T')[0] || '',
+      end_date: tournament.end_date?.split('T')[0] || '',
       logo_url: tournament.logo_url || '',
-      is_active: tournament.is_active
+      is_active: tournament.is_active,
+      format: tournament.format || 'groups_4'
     });
-    setShowModal(true);
+    setEditingId(tournament.id);
+    setShowForm(true);
   };
 
   const handleDelete = async (id) => {
@@ -69,247 +75,355 @@ const AdminTournaments = () => {
     try {
       await tournamentsAPI.delete(id);
       toast.success('Tournoi supprimé');
-      fetchTournaments();
+      fetchData();
     } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      toast.error('Erreur');
     }
   };
 
-  const resetForm = () => {
-    setEditingTournament(null);
-    setFormData({
-      name: '',
-      description: '',
-      start_date: '',
-      end_date: '',
-      logo_url: '',
-      is_active: true
-    });
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 500000) {
-      toast.error('Image trop grande (max 500KB)');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData({ ...formData, logo_url: reader.result });
-    };
-    reader.readAsDataURL(file);
+  const getFormatLabel = (format) => {
+    const f = formats.find(f => f.value === format);
+    return f ? f.label : format;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-20 flex items-center justify-center">
+      <div className="flex items-center justify-center p-12">
         <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-20 px-4 pb-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="font-display text-4xl gradient-text">Gestion des Tournois</h1>
-            <p className="text-gray-400 mt-2">Créez et gérez les compétitions</p>
-          </div>
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Nouveau Tournoi</span>
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
+          <Trophy className="w-8 h-8 text-yellow-500" />
+          <span>Tournois</span>
+        </h1>
+        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4' }); }} className="btn-primary flex items-center space-x-2">
+          <Plus className="w-5 h-5" />
+          <span>Nouveau</span>
+        </button>
+      </div>
 
-        {/* Tournaments List */}
-        <div className="grid gap-4">
-          {tournaments.length === 0 ? (
-            <div className="card text-center py-12">
-              <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Aucun tournoi créé</p>
-            </div>
-          ) : (
-            tournaments.map((tournament) => (
-              <motion.div
-                key={tournament.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="card"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    {tournament.logo_url ? (
-                      <img
-                        src={tournament.logo_url}
-                        alt={tournament.name}
-                        className="w-16 h-16 object-cover rounded-xl"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
-                        <Trophy className="w-8 h-8 text-white" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center space-x-3">
-                        <h3 className="text-xl font-bold text-white">{tournament.name}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          tournament.is_active 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {tournament.is_active ? 'Actif' : 'Inactif'}
-                        </span>
-                      </div>
-                      {tournament.description && (
-                        <p className="text-gray-400 text-sm mt-1">{tournament.description}</p>
-                      )}
-                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                        {tournament.start_date && (
-                          <span className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>
-                              {new Date(tournament.start_date).toLocaleDateString('fr-FR')}
-                              {tournament.end_date && ` - ${new Date(tournament.end_date).toLocaleDateString('fr-FR')}`}
-                            </span>
-                          </span>
-                        )}
-                        <span>{tournament.match_count || 0} matchs</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleEdit(tournament)}
-                      className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(tournament.id)}
-                      className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          )}
-        </div>
-
-        {/* Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gray-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">
-                  {editingTournament ? 'Modifier le tournoi' : 'Nouveau tournoi'}
-                </h2>
-                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
-                  <X className="w-6 h-6" />
-                </button>
+      {/* Tournament Form */}
+      {showForm && (
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="card">
+          <h2 className="text-xl font-bold text-white mb-4">{editingId ? 'Modifier' : 'Nouveau'} Tournoi</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Nom</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white"
+                  required
+                />
               </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Format</label>
+                <select
+                  value={formData.format}
+                  onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white"
+                >
+                  {formats.map(f => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Date début</label>
+                <input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Date fin</label>
+                <input
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white"
+                rows="2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Logo URL</label>
+              <input
+                type="text"
+                value={formData.logo_url}
+                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label className="text-gray-400">Actif</label>
+            </div>
+            <div className="flex space-x-3">
+              <button type="submit" className="btn-primary">
+                {editingId ? 'Modifier' : 'Créer'}
+              </button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">
+                Annuler
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-300 mb-2">Nom du tournoi *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                    placeholder="Ex: Coupe d'Afrique 2025"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 mb-2">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white resize-none"
-                    placeholder="Description du tournoi..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-2">Date de début</label>
-                    <input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-2">Date de fin</label>
-                    <input
-                      type="date"
-                      value={formData.end_date}
-                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 mb-2">Logo du tournoi</label>
-                  <div className="flex items-center space-x-4">
-                    {formData.logo_url ? (
-                      <img src={formData.logo_url} alt="Logo" className="w-16 h-16 object-cover rounded-xl" />
-                    ) : (
-                      <div className="w-16 h-16 bg-white/5 rounded-xl flex items-center justify-center">
-                        <Image className="w-8 h-8 text-gray-500" />
-                      </div>
-                    )}
-                    <label className="btn-secondary cursor-pointer">
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                      Choisir une image
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      formData.is_active ? 'bg-green-500' : 'bg-gray-600'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      formData.is_active ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                  <span className="text-gray-300">Tournoi actif</span>
-                </div>
-
-                <div className="flex space-x-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn-primary flex-1 flex items-center justify-center space-x-2">
-                    <Check className="w-5 h-5" />
-                    <span>{editingTournament ? 'Modifier' : 'Créer'}</span>
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+      {/* Tournaments List */}
+      <div className="space-y-4">
+        {tournaments.length === 0 ? (
+          <div className="card text-center py-12">
+            <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">Aucun tournoi</p>
           </div>
+        ) : (
+          tournaments.map(tournament => (
+            <motion.div
+              key={tournament.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="card"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  {tournament.logo_url ? (
+                    <img src={tournament.logo_url} alt={tournament.name} className="w-14 h-14 rounded-lg object-cover" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                      <Trophy className="w-7 h-7 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-white font-bold text-lg">{tournament.name}</h3>
+                    <div className="flex items-center space-x-3 text-sm text-gray-400">
+                      <span>{getFormatLabel(tournament.format)}</span>
+                      <span>•</span>
+                      <span>{tournament.match_count || 0} matchs</span>
+                      <span>•</span>
+                      <span>{tournament.team_count || 0} équipes</span>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full ${tournament.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                      {tournament.is_active ? 'Actif' : 'Inactif'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowGroupsModal(tournament)}
+                    className="p-2 hover:bg-blue-500/20 text-blue-400 rounded-lg"
+                    title="Gérer les groupes"
+                  >
+                    <Users className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(tournament)}
+                    className="p-2 hover:bg-white/10 text-gray-400 rounded-lg"
+                  >
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(tournament.id)}
+                    className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))
         )}
       </div>
+
+      {/* Groups Modal */}
+      {showGroupsModal && (
+        <GroupsModal
+          tournament={showGroupsModal}
+          teams={teams}
+          formats={formats}
+          onClose={() => { setShowGroupsModal(null); fetchData(); }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Groups Management Modal
+const GroupsModal = ({ tournament, teams, formats, onClose }) => {
+  const [tournamentTeams, setTournamentTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const format = formats.find(f => f.value === tournament.format);
+  const numGroups = format?.groups || 4;
+  const groupLetters = 'ABCDEFGH'.split('').slice(0, numGroups);
+
+  useEffect(() => {
+    fetchTeams();
+  }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const res = await adminAPI.getTournamentTeams(tournament.id);
+      setTournamentTeams(res.data);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTeamGroupChange = (teamId, groupName) => {
+    const existing = tournamentTeams.find(t => t.team_id === teamId);
+    if (existing) {
+      if (groupName === '') {
+        setTournamentTeams(tournamentTeams.filter(t => t.team_id !== teamId));
+      } else {
+        setTournamentTeams(tournamentTeams.map(t => 
+          t.team_id === teamId ? { ...t, group_name: groupName } : t
+        ));
+      }
+    } else if (groupName) {
+      const team = teams.find(t => t.id === teamId);
+      setTournamentTeams([...tournamentTeams, { team_id: teamId, group_name: groupName, name: team.name, flag_url: team.flag_url }]);
+    }
+  };
+
+  const getTeamGroup = (teamId) => {
+    const found = tournamentTeams.find(t => t.team_id === teamId);
+    return found?.group_name || '';
+  };
+
+  const saveGroups = async () => {
+    setSaving(true);
+    try {
+      const teamsData = tournamentTeams.map(t => ({
+        teamId: t.team_id,
+        groupName: t.group_name,
+        position: 0
+      }));
+      await adminAPI.bulkAddTournamentTeams(tournament.id, { teams: teamsData });
+      toast.success('Groupes sauvegardés');
+      onClose();
+    } catch (error) {
+      toast.error('Erreur');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderFlag = (flagUrl, name) => {
+    if (!flagUrl) return <span className="text-lg">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
+      return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
+    }
+    return <span className="text-lg">{flagUrl}</span>;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-gray-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Groupes - {tournament.name}</h2>
+            <p className="text-gray-400 text-sm">{format?.label}</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button onClick={saveGroups} disabled={saving} className="btn-primary flex items-center space-x-2">
+              <Save className="w-4 h-4" />
+              <span>Sauvegarder</span>
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg">
+              <X className="w-6 h-6 text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+            </div>
+          ) : (
+            <>
+              {/* Groups Preview */}
+              <div className="grid md:grid-cols-4 gap-4 mb-8">
+                {groupLetters.map(letter => {
+                  const groupTeams = tournamentTeams.filter(t => t.group_name === letter);
+                  return (
+                    <div key={letter} className="bg-white/5 rounded-xl p-4">
+                      <h3 className="font-bold text-white mb-3">Groupe {letter}</h3>
+                      {groupTeams.length === 0 ? (
+                        <p className="text-gray-500 text-sm">Aucune équipe</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {groupTeams.map(team => (
+                            <div key={team.team_id} className="flex items-center space-x-2 text-sm">
+                              {renderFlag(team.flag_url, team.name)}
+                              <span className="text-white">{team.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* All Teams */}
+              <h3 className="font-bold text-white mb-4">Assigner les équipes</h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {teams.map(team => (
+                  <div key={team.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      {renderFlag(team.flag_url, team.name)}
+                      <span className="text-white text-sm">{team.name}</span>
+                    </div>
+                    <select
+                      value={getTeamGroup(team.id)}
+                      onChange={(e) => handleTeamGroupChange(team.id, e.target.value)}
+                      className="bg-gray-700 border border-gray-600 rounded-lg py-1 px-2 text-white text-sm"
+                    >
+                      <option value="">-</option>
+                      {groupLetters.map(letter => (
+                        <option key={letter} value={letter}>Groupe {letter}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
