@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Award, TrendingUp, Target, Users, Eye } from 'lucide-react';
+import { Trophy, Medal, Award, TrendingUp, Target, Users } from 'lucide-react';
 import { leaderboardAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import UserPredictionsModal from '../components/UserPredictionsModal';
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState(null);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -18,9 +16,10 @@ const LeaderboardPage = () => {
   const fetchLeaderboard = async () => {
     try {
       const res = await leaderboardAPI.getAll();
-      setLeaderboard(res.data);
+      setLeaderboard(res.data || []);
     } catch (error) {
       console.error('Error:', error);
+      setLeaderboard([]);
     } finally {
       setLoading(false);
     }
@@ -57,7 +56,6 @@ const LeaderboardPage = () => {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="font-display text-4xl gradient-text">Classement</h1>
-          <p className="text-gray-400 mt-2">Cliquez sur un joueur pour voir ses pronostics</p>
         </div>
 
         {/* Stats Cards */}
@@ -89,8 +87,7 @@ const LeaderboardPage = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="card bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-primary-500/30 mb-8 cursor-pointer hover:border-primary-500/50 transition-all"
-            onClick={() => setSelectedUserId(user.id)}
+            className="card bg-gradient-to-r from-primary-500/20 to-accent-500/20 border-primary-500/30 mb-8"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -102,22 +99,19 @@ const LeaderboardPage = () => {
                   <p className="text-sm text-gray-400">{user.name}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-primary-400">
-                    {leaderboard.find(u => u.id === user.id)?.total_points || 0} pts
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    {leaderboard.find(u => u.id === user.id)?.correct_predictions || 0} bons pronos
-                  </p>
-                </div>
-                <Eye className="w-5 h-5 text-primary-400" />
+              <div className="text-right">
+                <p className="text-2xl font-bold text-primary-400">
+                  {leaderboard.find(u => u.id === user.id)?.total_points || 0} pts
+                </p>
+                <p className="text-sm text-gray-400">
+                  {leaderboard.find(u => u.id === user.id)?.correct_predictions || 0} bons pronos
+                </p>
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Full Leaderboard */}
+        {/* Leaderboard */}
         <div className="card">
           <h2 className="text-xl font-bold text-white mb-4">Classement complet</h2>
           
@@ -134,10 +128,9 @@ const LeaderboardPage = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer hover:border-primary-500/50 transition-all ${getRankBg(index)} ${
+                  className={`flex items-center justify-between p-4 rounded-xl border ${getRankBg(index)} ${
                     user && player.id === user.id ? 'ring-2 ring-primary-500' : ''
                   }`}
-                  onClick={() => setSelectedUserId(player.id)}
                 >
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center justify-center w-8">
@@ -163,23 +156,20 @@ const LeaderboardPage = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className={`text-xl font-bold ${
-                        index === 0 ? 'text-yellow-400' :
-                        index === 1 ? 'text-gray-300' :
-                        index === 2 ? 'text-orange-400' :
-                        'text-primary-400'
-                      }`}>
-                        {player.total_points} pts
+                  <div className="text-right">
+                    <p className={`text-xl font-bold ${
+                      index === 0 ? 'text-yellow-400' :
+                      index === 1 ? 'text-gray-300' :
+                      index === 2 ? 'text-orange-400' :
+                      'text-primary-400'
+                    }`}>
+                      {player.total_points} pts
+                    </p>
+                    {player.total_predictions > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {((player.correct_predictions / player.total_predictions) * 100).toFixed(0)}% réussite
                       </p>
-                      {player.total_predictions > 0 && (
-                        <p className="text-xs text-gray-500">
-                          {((player.correct_predictions / player.total_predictions) * 100).toFixed(0)}% réussite
-                        </p>
-                      )}
-                    </div>
-                    <Eye className="w-4 h-4 text-gray-500" />
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -187,14 +177,6 @@ const LeaderboardPage = () => {
           )}
         </div>
       </div>
-
-      {/* User Predictions Modal */}
-      {selectedUserId && (
-        <UserPredictionsModal
-          userId={selectedUserId}
-          onClose={() => setSelectedUserId(null)}
-        />
-      )}
     </div>
   );
 };
