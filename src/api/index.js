@@ -21,7 +21,6 @@ api.interceptors.response.use(
       if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/connexion';
       }
     }
     return Promise.reject(error);
@@ -70,21 +69,17 @@ export const matchesAPI = {
 
 export const predictionsAPI = {
   getMyPredictions: () => api.get('/predictions'),
-  getByMatch: (matchId) => api.get(`/predictions/match/${matchId}`),
   makePrediction: (data) => api.post('/predictions', data),
 };
 
 export const leaderboardAPI = {
   getAll: () => api.get('/leaderboard'),
-  getUserPredictions: (userId) => api.get(`/leaderboard/user/${userId}`),
 };
 
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
-  getScoringRules: () => api.get('/admin/scoring-rules'),
-  updateScoringRules: (data) => api.put('/admin/scoring-rules', data),
 };
 
 export const validateAlgerianPhone = (phone) => {
