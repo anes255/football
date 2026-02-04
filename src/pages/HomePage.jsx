@@ -17,13 +17,14 @@ const HomePage = () => {
   const fetchData = async () => {
     try {
       const [tourRes, matchesRes, leaderRes] = await Promise.all([
-        tournamentsAPI.getActive(),
-        matchesAPI.getVisible(),
-        leaderboardAPI.getAll()
+        tournamentsAPI.getActive().catch(() => ({ data: [] })),
+        matchesAPI.getVisible().catch(() => ({ data: [] })),
+        leaderboardAPI.getAll().catch(() => ({ data: [] }))
       ]);
-      setTournaments(tourRes.data.slice(0, 2));
-      setUpcomingMatches(matchesRes.data.filter(m => m.status === 'upcoming').slice(0, 3));
-      setTopPlayers(leaderRes.data.slice(0, 3));
+      setTournaments(tourRes.data?.slice(0, 2) || []);
+      const upcoming = matchesRes.data?.filter(m => m.status === 'upcoming') || [];
+      setUpcomingMatches(upcoming.slice(0, 3));
+      setTopPlayers(leaderRes.data?.slice(0, 3) || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -51,14 +52,12 @@ const HomePage = () => {
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        {/* Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 via-gray-900 to-accent-600/20"></div>
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl"></div>
         
         <div className="relative pt-32 pb-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
-            {/* Logo */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -70,7 +69,6 @@ const HomePage = () => {
               </div>
             </motion.div>
 
-            {/* Title */}
             <motion.h1
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -81,34 +79,26 @@ const HomePage = () => {
               <span className="text-white">World</span>
             </motion.h1>
 
-            {/* Subtitle */}
             <motion.p
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
               className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10"
             >
-              Pronostiquez les résultats des matchs de football et défiez vos amis pour devenir le meilleur !
+              Pronostiquez les résultats des matchs et défiez vos amis !
             </motion.p>
 
-            {/* CTA Buttons */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link
-                to="/matchs"
-                className="btn-primary text-lg px-8 py-4 flex items-center justify-center space-x-2"
-              >
+              <Link to="/matchs" className="btn-primary text-lg px-8 py-4 flex items-center justify-center space-x-2">
                 <Calendar className="w-5 h-5" />
                 <span>Voir les matchs</span>
               </Link>
-              <Link
-                to="/classement"
-                className="btn-secondary text-lg px-8 py-4 flex items-center justify-center space-x-2"
-              >
+              <Link to="/classement" className="btn-secondary text-lg px-8 py-4 flex items-center justify-center space-x-2">
                 <Award className="w-5 h-5" />
                 <span>Classement</span>
               </Link>
@@ -117,17 +107,12 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Content Section */}
+      {/* Content */}
       <div className="px-4 pb-16 -mt-4">
         <div className="max-w-6xl mx-auto">
           {/* Tournaments */}
           {tournaments.length > 0 && (
-            <motion.section
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mb-12"
-            >
+            <motion.section initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="mb-12">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
                   <Trophy className="w-6 h-6 text-yellow-500" />
@@ -140,29 +125,19 @@ const HomePage = () => {
               </div>
               
               <div className="grid md:grid-cols-2 gap-6">
-                {tournaments.map((tournament, index) => (
-                  <Link
-                    key={tournament.id}
-                    to={`/tournois/${tournament.id}`}
-                    className="group"
-                  >
+                {tournaments.map((tournament) => (
+                  <Link key={tournament.id} to={`/tournois/${tournament.id}`} className="group">
                     <div className="card border-2 border-transparent hover:border-primary-500/50 transition-all duration-300 h-full">
                       <div className="flex items-center space-x-4">
                         {tournament.logo_url ? (
-                          <img
-                            src={tournament.logo_url}
-                            alt={tournament.name}
-                            className="w-16 h-16 rounded-xl object-cover"
-                          />
+                          <img src={tournament.logo_url} alt={tournament.name} className="w-16 h-16 rounded-xl object-cover" />
                         ) : (
                           <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
                             <Trophy className="w-8 h-8 text-white" />
                           </div>
                         )}
                         <div className="flex-1">
-                          <h3 className="text-xl font-bold text-white group-hover:text-primary-400 transition-colors">
-                            {tournament.name}
-                          </h3>
+                          <h3 className="text-xl font-bold text-white group-hover:text-primary-400 transition-colors">{tournament.name}</h3>
                           <p className="text-gray-400 text-sm">{tournament.match_count || 0} matchs</p>
                         </div>
                         <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-primary-400 transition-colors" />
@@ -176,13 +151,8 @@ const HomePage = () => {
 
           {/* Two Column Layout */}
           <div className="grid lg:grid-cols-5 gap-8">
-            {/* Upcoming Matches - Takes 3 columns */}
-            <motion.section
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="lg:col-span-3"
-            >
+            {/* Upcoming Matches */}
+            <motion.section initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }} className="lg:col-span-3">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
                   <Calendar className="w-6 h-6 text-blue-500" />
@@ -226,13 +196,8 @@ const HomePage = () => {
               </div>
             </motion.section>
 
-            {/* Top Players - Takes 2 columns */}
-            <motion.section
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="lg:col-span-2"
-            >
+            {/* Top Players */}
+            <motion.section initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }} className="lg:col-span-2">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
                   <Award className="w-6 h-6 text-yellow-500" />
@@ -256,15 +221,11 @@ const HomePage = () => {
                       <div
                         key={player.id}
                         className={`flex items-center space-x-4 p-3 rounded-xl ${
-                          index === 0 ? 'bg-yellow-500/10' :
-                          index === 1 ? 'bg-gray-400/10' :
-                          'bg-orange-500/10'
+                          index === 0 ? 'bg-yellow-500/10' : index === 1 ? 'bg-gray-400/10' : 'bg-orange-500/10'
                         }`}
                       >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                          index === 0 ? 'bg-yellow-500 text-black' :
-                          index === 1 ? 'bg-gray-400 text-black' :
-                          'bg-orange-500 text-white'
+                          index === 0 ? 'bg-yellow-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : 'bg-orange-500 text-white'
                         }`}>
                           {index + 1}
                         </div>
@@ -274,9 +235,7 @@ const HomePage = () => {
                         </div>
                         <div className="text-right">
                           <p className={`text-xl font-bold ${
-                            index === 0 ? 'text-yellow-400' :
-                            index === 1 ? 'text-gray-300' :
-                            'text-orange-400'
+                            index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-orange-400'
                           }`}>
                             {player.total_points}
                           </p>
