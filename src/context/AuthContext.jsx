@@ -3,25 +3,24 @@ import { authAPI } from '../api';
 
 const AuthContext = createContext(null);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-};
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { checkAuth(); }, []);
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   const checkAuth = async () => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
       try {
-        const response = await authAPI.verify();
-        setUser(response.data.user);
-      } catch {
+        const res = await authAPI.verify();
+        setUser(res.data.user);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      } catch (error) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
@@ -30,20 +29,20 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
-  const login = async (phone, password) => {
-    const response = await authAPI.login({ phone, password });
-    localStorage.setItem('token', response.data.token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-    setUser(response.data.user);
-    return response.data;
+  const login = async (credentials) => {
+    const res = await authAPI.login(credentials);
+    localStorage.setItem('token', res.data.token);
+    localStorage.setItem('user', JSON.stringify(res.data.user));
+    setUser(res.data.user);
+    return res.data;
   };
 
   const register = async (data) => {
-    const response = await authAPI.register(data);
-    localStorage.setItem('token', response.data.token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-    setUser(response.data.user);
-    return response.data;
+    const res = await authAPI.register(data);
+    localStorage.setItem('token', res.data.token);
+    localStorage.setItem('user', JSON.stringify(res.data.user));
+    setUser(res.data.user);
+    return res.data;
   };
 
   const logout = () => {
@@ -52,11 +51,31 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const value = {
+    user,
+    loading,
+    login,
+    register,
+    logout,
+    updateUser
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user, isAdmin: user?.is_admin || false }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export default AuthContext;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
