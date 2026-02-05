@@ -37,9 +37,9 @@ const AdminMatches = () => {
         teamsAPI.getAll(),
         tournamentsAPI.getAll()
       ]);
-      setMatches(matchesRes.data);
-      setTeams(teamsRes.data);
-      setTournaments(tournamentsRes.data);
+      setMatches(matchesRes.data || []);
+      setTeams(teamsRes.data || []);
+      setTournaments(tournamentsRes.data || []);
     } catch (error) {
       toast.error('Erreur lors du chargement');
     } finally {
@@ -50,7 +50,10 @@ const AdminMatches = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Create the datetime string and explicitly keep it as local time
+      // By not adding 'Z' or timezone offset, the backend should treat it as-is
       const matchDateTime = `${formData.match_date}T${formData.match_time}:00`;
+      
       const data = {
         tournament_id: formData.tournament_id || null,
         team1_id: parseInt(formData.team1_id),
@@ -87,14 +90,22 @@ const AdminMatches = () => {
   };
 
   const handleEdit = (match) => {
+    // Parse the date and format it for the input fields
+    // Use local time to avoid timezone issues
     const matchDate = new Date(match.match_date);
+    const year = matchDate.getFullYear();
+    const month = String(matchDate.getMonth() + 1).padStart(2, '0');
+    const day = String(matchDate.getDate()).padStart(2, '0');
+    const hours = String(matchDate.getHours()).padStart(2, '0');
+    const minutes = String(matchDate.getMinutes()).padStart(2, '0');
+    
     setEditingMatch(match);
     setFormData({
       tournament_id: match.tournament_id || '',
       team1_id: match.team1_id.toString(),
       team2_id: match.team2_id.toString(),
-      match_date: matchDate.toISOString().split('T')[0],
-      match_time: matchDate.toTimeString().slice(0, 5),
+      match_date: `${year}-${month}-${day}`,
+      match_time: `${hours}:${minutes}`,
       stage: match.stage || 'Groupes'
     });
     setShowModal(true);
@@ -139,9 +150,23 @@ const AdminMatches = () => {
     return { text: 'À venir', color: 'bg-blue-500/20 text-blue-400' };
   };
 
+  // Format date for display using local time
+  const formatMatchDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR');
+  };
+
+  const formatMatchTime = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
+
   const filteredMatches = filterTournament
     ? matches.filter(m => m.tournament_id === parseInt(filterTournament))
     : matches;
+
+  // Sort matches by date (newest first for upcoming, oldest first for completed)
+  const sortedMatches = [...filteredMatches].sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
 
   if (loading) {
     return (
@@ -157,7 +182,7 @@ const AdminMatches = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="font-display text-4xl gradient-text">Gestion des Matchs</h1>
-            <p className="text-gray-400 mt-2">Planifiez et gérez les matchs</p>
+            <p className="text-gray-400 mt-2">{matches.length} matchs planifiés</p>
           </div>
           <div className="flex items-center space-x-3">
             <select
@@ -170,7 +195,10 @@ const AdminMatches = () => {
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
-            <button onClick={() => { resetForm(); setShowModal(true); }} className="btn-primary flex items-center space-x-2">
+            <button
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="btn-primary flex items-center space-x-2"
+            >
               <Plus className="w-5 h-5" />
               <span>Nouveau Match</span>
             </button>
@@ -178,13 +206,13 @@ const AdminMatches = () => {
         </div>
 
         <div className="space-y-4">
-          {filteredMatches.length === 0 ? (
+          {sortedMatches.length === 0 ? (
             <div className="card text-center py-12">
               <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400">Aucun match planifié</p>
             </div>
           ) : (
-            filteredMatches.map((match) => {
+            sortedMatches.map((match) => {
               const status = getMatchStatus(match);
               return (
                 <motion.div key={match.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
@@ -199,10 +227,10 @@ const AdminMatches = () => {
                           <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
                         ) : (
                           <div className="text-primary-400 font-semibold">
-                            {new Date(match.match_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            {formatMatchTime(match.match_date)}
                           </div>
                         )}
-                        <div className="text-xs text-gray-500 mt-1">{new Date(match.match_date).toLocaleDateString('fr-FR')}</div>
+                        <div className="text-xs text-gray-500 mt-1">{formatMatchDate(match.match_date)}</div>
                       </div>
                       <div className="flex items-center space-x-2 min-w-[120px]">
                         {renderFlag(match.team2_flag, match.team2_name)}
@@ -272,10 +300,11 @@ const AdminMatches = () => {
                     <input type="date" value={formData.match_date} onChange={(e) => setFormData({ ...formData, match_date: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" required />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-300 mb-2">Heure *</label>
+                    <label className="block text-sm text-gray-300 mb-2">Heure (locale) *</label>
                     <input type="time" value={formData.match_time} onChange={(e) => setFormData({ ...formData, match_time: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" required />
                   </div>
                 </div>
+                <p className="text-xs text-gray-400">⏰ L'heure sera sauvegardée telle quelle (heure locale)</p>
                 <div>
                   <label className="block text-sm text-gray-300 mb-2">Phase</label>
                   <select value={formData.stage} onChange={(e) => setFormData({ ...formData, stage: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white">
