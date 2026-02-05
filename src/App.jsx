@@ -22,6 +22,7 @@ import AdminTeams from './pages/admin/AdminTeams';
 import AdminMatches from './pages/admin/AdminMatches';
 import AdminTournaments from './pages/admin/AdminTournaments';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminSettings from './pages/admin/AdminSettings';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path="matchs" element={<AdminMatches />} />
           <Route path="tournois" element={<AdminTournaments />} />
           <Route path="utilisateurs" element={<AdminUsers />} />
+          <Route path="parametres" element={<AdminSettings />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />
