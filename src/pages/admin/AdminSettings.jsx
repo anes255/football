@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Palette, Trophy, Save, RefreshCw } from 'lucide-react';
-import { adminAPI, teamsAPI } from '../../api';
+import { adminAPI, teamsAPI, tournamentsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const AdminSettings = () => {
@@ -9,11 +9,12 @@ const AdminSettings = () => {
   const [colors, setColors] = useState({
     primary_color: '#6366f1',
     accent_color: '#8b5cf6',
-    background_color: '#0f172a',
-    card_color: '#1e293b',
-    text_color: '#ffffff'
+    bg_color: '#0f172a',
+    card_color: '#1e293b'
   });
   const [teams, setTeams] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [selectedTournament, setSelectedTournament] = useState('');
   const [selectedWinner, setSelectedWinner] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,10 +25,11 @@ const AdminSettings = () => {
 
   const fetchData = async () => {
     try {
-      const [rulesRes, settingsRes, teamsRes] = await Promise.all([
+      const [rulesRes, settingsRes, teamsRes, tournamentsRes] = await Promise.all([
         adminAPI.getScoringRules(),
         adminAPI.getSettings(),
-        teamsAPI.getAll()
+        teamsAPI.getAll(),
+        tournamentsAPI.getAll()
       ]);
       
       const rulesObj = {};
@@ -35,6 +37,7 @@ const AdminSettings = () => {
       setScoringRules(rulesObj);
       setColors({ ...colors, ...settingsRes.data });
       setTeams(teamsRes.data);
+      setTournaments(tournamentsRes.data);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Erreur de chargement');
@@ -68,7 +71,6 @@ const AdminSettings = () => {
     try {
       await adminAPI.updateSettings(colors);
       toast.success('Couleurs mises à jour');
-      // Apply colors to CSS variables
       applyColors(colors);
     } catch (error) {
       toast.error('Erreur');
@@ -80,20 +82,26 @@ const AdminSettings = () => {
   const applyColors = (colorSettings) => {
     const root = document.documentElement;
     if (colorSettings.primary_color) {
-      root.style.setProperty('--color-primary', colorSettings.primary_color);
+      root.style.setProperty('--color-primary-500', colorSettings.primary_color);
     }
     if (colorSettings.accent_color) {
-      root.style.setProperty('--color-accent', colorSettings.accent_color);
+      root.style.setProperty('--color-accent-500', colorSettings.accent_color);
+    }
+    if (colorSettings.bg_color) {
+      root.style.setProperty('--color-bg', colorSettings.bg_color);
     }
   };
 
   const awardTournamentWinner = async () => {
-    if (!selectedWinner) {
-      toast.error('Sélectionnez une équipe');
+    if (!selectedTournament || !selectedWinner) {
+      toast.error('Sélectionnez un tournoi et une équipe');
       return;
     }
     try {
-      const res = await adminAPI.awardTournamentWinner({ winner_team_id: selectedWinner });
+      const res = await adminAPI.awardTournamentWinner({ 
+        tournament_id: parseInt(selectedTournament), 
+        team_id: parseInt(selectedWinner) 
+      });
       toast.success(res.data.message);
     } catch (error) {
       toast.error('Erreur');
@@ -101,12 +109,12 @@ const AdminSettings = () => {
   };
 
   const ruleLabels = {
-    exact_score: { label: 'Score exact', description: 'Prédiction exacte du score (ex: 2-1 → 2-1)' },
-    correct_winner: { label: 'Bon vainqueur', description: 'Bonne équipe gagnante, score différent' },
-    correct_draw: { label: 'Match nul correct', description: 'Match nul prédit et réalisé' },
-    correct_goal_difference: { label: 'Bonne différence de buts', description: 'Bonus si la différence de buts est correcte' },
-    correct_goals_one_team: { label: 'Buts d\'une équipe', description: 'Bonus pour chaque équipe dont les buts sont corrects' },
-    tournament_winner: { label: 'Vainqueur du tournoi', description: 'Bonus si l\'équipe prédite gagne le tournoi' }
+    exact_score: { label: 'Score exact', description: 'Les deux scores sont parfaitement prédits (ex: 2-1 → 2-1)', example: '2-1 → 2-1' },
+    correct_winner: { label: 'Bon vainqueur', description: 'La bonne équipe gagnante est prédite mais pas le score exact', example: '3-0 prédit, 2-1 réel' },
+    correct_draw: { label: 'Match nul correct', description: 'Un match nul est prédit et le résultat est un nul', example: '1-1 prédit, 0-0 réel' },
+    correct_goal_diff: { label: 'Bonne différence de buts', description: 'Bonus si la différence de buts est correcte avec le bon vainqueur', example: '2-0 prédit, 3-1 réel (+1)' },
+    one_team_goals: { label: 'Buts d\'une équipe corrects', description: 'Bonus pour chaque équipe dont les buts sont correctement prédits', example: '2-1 prédit, 2-0 réel (+1 pour équipe 1)' },
+    tournament_winner: { label: 'Vainqueur du tournoi', description: 'Bonus si l\'utilisateur a prédit la bonne équipe gagnante du tournoi', example: '' }
   };
 
   if (loading) {
@@ -118,7 +126,7 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
         <Settings className="w-8 h-8 text-primary-500" />
         <span>Paramètres</span>
@@ -143,6 +151,9 @@ const AdminSettings = () => {
               <div className="flex-1">
                 <p className="text-white font-medium">{ruleLabels[ruleType].label}</p>
                 <p className="text-sm text-gray-400">{ruleLabels[ruleType].description}</p>
+                {ruleLabels[ruleType].example && (
+                  <p className="text-xs text-primary-400 mt-1">Ex: {ruleLabels[ruleType].example}</p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -167,8 +178,9 @@ const AdminSettings = () => {
           </p>
           <ul className="text-sm text-gray-400 mt-2 space-y-1">
             <li>• Prono <span className="text-green-400">2-1</span> = {scoringRules.exact_score || 0} pts (score exact)</li>
-            <li>• Prono <span className="text-yellow-400">3-2</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_difference || 0)} pts (bon vainqueur + bonne diff)</li>
-            <li>• Prono <span className="text-yellow-400">2-0</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goals_one_team || 0)} pts (bon vainqueur + buts équipe 1)</li>
+            <li>• Prono <span className="text-yellow-400">3-2</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_diff || 0)} pts (bon vainqueur + même diff buts)</li>
+            <li>• Prono <span className="text-yellow-400">2-0</span> = {(scoringRules.correct_winner || 0) + (scoringRules.one_team_goals || 0)} pts (bon vainqueur + buts équipe 1)</li>
+            <li>• Prono <span className="text-yellow-400">3-1</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_diff || 0) + (scoringRules.one_team_goals || 0)} pts (vainqueur + diff + équipe 2)</li>
             <li>• Prono <span className="text-red-400">0-2</span> = 0 pts (mauvais vainqueur)</li>
           </ul>
         </div>
@@ -189,11 +201,10 @@ const AdminSettings = () => {
 
         <div className="grid md:grid-cols-2 gap-4">
           {[
-            { key: 'primary_color', label: 'Couleur Primaire', desc: 'Boutons, liens' },
+            { key: 'primary_color', label: 'Couleur Primaire', desc: 'Boutons, liens, accents' },
             { key: 'accent_color', label: 'Couleur Accent', desc: 'Éléments secondaires' },
-            { key: 'background_color', label: 'Arrière-plan', desc: 'Fond de page' },
-            { key: 'card_color', label: 'Cartes', desc: 'Fond des cartes' },
-            { key: 'text_color', label: 'Texte', desc: 'Couleur du texte' }
+            { key: 'bg_color', label: 'Arrière-plan', desc: 'Fond de page' },
+            { key: 'card_color', label: 'Cartes', desc: 'Fond des cartes' }
           ].map(({ key, label, desc }) => (
             <div key={key} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
               <div>
@@ -220,7 +231,7 @@ const AdminSettings = () => {
 
         {/* Color Preview */}
         <div className="mt-6 p-4 rounded-xl" style={{ backgroundColor: colors.card_color }}>
-          <h3 className="font-medium mb-3" style={{ color: colors.text_color }}>Aperçu</h3>
+          <h3 className="font-medium mb-3 text-white">Aperçu</h3>
           <div className="flex space-x-3">
             <button 
               className="px-4 py-2 rounded-lg text-white"
@@ -242,27 +253,44 @@ const AdminSettings = () => {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card">
         <h2 className="text-xl font-bold text-white flex items-center space-x-2 mb-6">
           <Trophy className="w-5 h-5 text-yellow-500" />
-          <span>Attribuer Bonus Vainqueur</span>
+          <span>Attribuer Bonus Vainqueur Tournoi</span>
         </h2>
 
-        <div className="flex items-center space-x-4">
-          <select
-            value={selectedWinner}
-            onChange={(e) => setSelectedWinner(e.target.value)}
-            className="flex-1 bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
-          >
-            <option value="">Sélectionner l'équipe gagnante</option>
-            {teams.map(team => (
-              <option key={team.id} value={team.id}>{team.name}</option>
-            ))}
-          </select>
-          <button onClick={awardTournamentWinner} className="btn-primary flex items-center space-x-2">
-            <Trophy className="w-5 h-5" />
-            <span>Attribuer {scoringRules.tournament_winner || 10} pts</span>
-          </button>
+        <div className="grid md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Tournoi</label>
+            <select
+              value={selectedTournament}
+              onChange={(e) => setSelectedTournament(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
+            >
+              <option value="">Sélectionner un tournoi</option>
+              {tournaments.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Équipe Gagnante</label>
+            <select
+              value={selectedWinner}
+              onChange={(e) => setSelectedWinner(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
+            >
+              <option value="">Sélectionner l'équipe</option>
+              {teams.map(team => (
+                <option key={team.id} value={team.id}>{team.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        <button onClick={awardTournamentWinner} className="btn-primary flex items-center space-x-2">
+          <Trophy className="w-5 h-5" />
+          <span>Attribuer {scoringRules.tournament_winner || 10} pts aux gagnants</span>
+        </button>
         <p className="text-sm text-gray-400 mt-2">
-          Tous les utilisateurs ayant prédit cette équipe comme vainqueur recevront {scoringRules.tournament_winner || 10} points bonus.
+          Tous les utilisateurs ayant prédit cette équipe comme vainqueur du tournoi recevront {scoringRules.tournament_winner || 10} points bonus.
         </p>
       </motion.div>
     </div>
