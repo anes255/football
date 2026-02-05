@@ -1,18 +1,30 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Trophy, Users, Calendar, Settings, Flag, Home } from 'lucide-react';
+import { Trophy, Users, Calendar, Settings, Flag, Home, LayoutDashboard, Award } from 'lucide-react';
 
 const AdminLayout = () => {
   const location = useLocation();
 
   const adminLinks = [
+    { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { path: '/admin/tournois', label: 'Tournois', icon: Trophy },
     { path: '/admin/equipes', label: 'Équipes', icon: Flag },
     { path: '/admin/matchs', label: 'Matchs', icon: Calendar },
     { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: Users },
+    { path: '/admin/scoring', label: 'Scoring', icon: Award },
     { path: '/admin/parametres', label: 'Paramètres', icon: Settings },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path, exact = false) => {
+    if (exact) {
+      return location.pathname === path;
+    }
+    // For non-exact matches, check if current path starts with the link path
+    // but avoid matching /admin for /admin/equipes etc
+    if (path === '/admin') {
+      return location.pathname === '/admin';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <div className="min-h-screen pt-16">
@@ -29,7 +41,7 @@ const AdminLayout = () => {
               key={link.path}
               to={link.path}
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
-                isActive(link.path)
+                isActive(link.path, link.exact)
                   ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
@@ -59,7 +71,7 @@ const AdminLayout = () => {
               key={link.path}
               to={link.path}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                isActive(link.path)
+                isActive(link.path, link.exact)
                   ? 'bg-primary-500/20 text-primary-400'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
