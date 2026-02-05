@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Calendar, Trophy, TrendingUp } from 'lucide-react';
-import { adminAPI, matchesAPI, teamsAPI } from '../../api';
-import AdminSidebar from '../../components/AdminSidebar';
+import { adminAPI, matchesAPI, teamsAPI, leaderboardAPI } from '../../api';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({ users: 0, matches: 0, teams: 0, predictions: 0 });
@@ -14,8 +13,18 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [usersRes, matchesRes, teamsRes, leaderboardRes] = await Promise.all([adminAPI.getUsers(), matchesAPI.getAll(), teamsAPI.getAll(), adminAPI.getLeaderboard()]);
-      setStats({ users: usersRes.data.length, matches: matchesRes.data.length, teams: teamsRes.data.length, predictions: usersRes.data.reduce((s, u) => s + (u.total_predictions || 0), 0) });
+      const [usersRes, matchesRes, teamsRes, leaderboardRes] = await Promise.all([
+        adminAPI.getUsers(), 
+        matchesAPI.getAll(), 
+        teamsAPI.getAll(), 
+        leaderboardAPI.getAll()
+      ]);
+      setStats({ 
+        users: usersRes.data.length, 
+        matches: matchesRes.data.length, 
+        teams: teamsRes.data.length, 
+        predictions: usersRes.data.reduce((s, u) => s + (u.total_predictions || 0), 0) 
+      });
       setTopUsers(leaderboardRes.data.slice(0, 5));
       setRecentMatches(matchesRes.data.slice(0, 5));
     } catch (error) { console.error(error); }
@@ -30,9 +39,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-16 flex">
-      <AdminSidebar />
-      <div className="flex-1 p-8">
+    <div className="p-8">
         <h1 className="font-display text-4xl gradient-text tracking-wider mb-8">Dashboard</h1>
         {loading ? <div className="flex items-center justify-center h-64"><div className="animate-spin w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full" /></div> : (
           <>
@@ -70,7 +77,6 @@ const AdminDashboard = () => {
           </>
         )}
       </div>
-    </div>
   );
 };
 
