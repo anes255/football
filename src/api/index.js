@@ -47,6 +47,8 @@ export const tournamentsAPI = {
   getActive: () => api.get('/tournaments/active'),
   getById: (id) => api.get(`/tournaments/${id}`),
   getMatches: (id) => api.get(`/tournaments/${id}/matches`),
+  getTeams: (id) => api.get(`/tournaments/${id}/teams`),
+  getFormats: () => api.get('/tournaments/formats'),
   create: (data) => api.post('/tournaments', data),
   update: (id, data) => api.put(`/tournaments/${id}`, data),
   delete: (id) => api.delete(`/tournaments/${id}`),
@@ -70,16 +72,33 @@ export const matchesAPI = {
 export const predictionsAPI = {
   getMyPredictions: () => api.get('/predictions'),
   makePrediction: (data) => api.post('/predictions', data),
+  getUserPredictions: (userId) => api.get(`/users/${userId}/predictions`),
+};
+
+export const tournamentWinnerAPI = {
+  get: (tournamentId) => api.get(`/tournament-winner/${tournamentId}`),
+  predict: (data) => api.post('/tournament-winner', data),
 };
 
 export const leaderboardAPI = {
   getAll: () => api.get('/leaderboard'),
 };
 
+export const settingsAPI = {
+  get: () => api.get('/settings'),
+};
+
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  getScoringRules: () => api.get('/admin/scoring-rules'),
+  updateScoringRules: (data) => api.put('/admin/scoring-rules', data),
+  getSettings: () => api.get('/settings'),
+  updateSettings: (data) => api.put('/admin/settings', data),
+  bulkAddTournamentTeams: (id, data) => api.post(`/admin/tournaments/${id}/teams`, data),
+  getTournamentTeams: (id) => api.get(`/tournaments/${id}/teams`),
+  awardTournamentWinner: (data) => api.post('/admin/award-winner', data),
 };
 
 export const validateAlgerianPhone = (phone) => {
