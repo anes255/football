@@ -15,18 +15,32 @@ const HomePage = () => {
     fetchData();
   }, []);
 
+  // Check if match is within 24 hours
+  const isWithin24Hours = (matchDate) => {
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diff = match - now;
+    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+  };
+
   const fetchData = async () => {
     try {
       const [tourRes, matchRes, leadRes, settingsRes] = await Promise.all([
         tournamentsAPI.getActive().catch(() => ({ data: [] })),
-        matchesAPI.getVisible().catch(() => ({ data: [] })),
+        matchesAPI.getAll().catch(() => ({ data: [] })),
         leaderboardAPI.getAll().catch(() => ({ data: [] })),
         settingsAPI.get().catch(() => ({ data: {} }))
       ]);
       
       setTournaments(tourRes.data?.slice(0, 2) || []);
-      const upcoming = (matchRes.data || []).filter(m => m.status === 'upcoming');
-      setMatches(upcoming.slice(0, 4));
+      
+      // Only show upcoming matches within 24h
+      const allMatches = matchRes.data || [];
+      const upcomingWithin24h = allMatches
+        .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+        .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+      setMatches(upcomingWithin24h.slice(0, 4));
+      
       setLeaderboard(leadRes.data?.slice(0, 5) || []);
       setSettings({ ...settings, ...settingsRes.data });
     } catch (error) {
@@ -133,9 +147,9 @@ const HomePage = () => {
               <p className="text-xs text-gray-400">Tournois actifs</p>
             </div>
             <div className="card text-center py-4">
-              <Calendar className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+              <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-1" />
               <p className="text-xl font-bold text-white">{matches.length}</p>
-              <p className="text-xs text-gray-400">Matchs à venir</p>
+              <p className="text-xs text-gray-400">Matchs (24h)</p>
             </div>
             <div className="card text-center py-4">
               <Users className="w-6 h-6 text-green-500 mx-auto mb-1" />
@@ -155,8 +169,9 @@ const HomePage = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-blue-400" />
-                  <span>Prochains matchs</span>
+                  <span className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
+                  <span>Matchs à venir</span>
+                  <span className="text-sm font-normal text-orange-400">(24h)</span>
                 </h2>
                 <Link to="/matchs" className="text-primary-400 hover:text-primary-300 text-sm flex items-center">
                   Voir tout <ArrowRight className="w-4 h-4 ml-1" />
@@ -167,7 +182,8 @@ const HomePage = () => {
                 {matches.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Aucun match programmé</p>
+                    <p>Aucun match dans les 24h</p>
+                    <p className="text-sm text-gray-500 mt-1">Les matchs apparaissent 24h avant le coup d'envoi</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-white/10">
@@ -180,7 +196,7 @@ const HomePage = () => {
                           </Link>
                           <div className="px-3 text-center shrink-0">
                             <div className="text-xs text-gray-500">{formatDate(match.match_date)}</div>
-                            <div className="text-primary-400 font-semibold">VS</div>
+                            <div className="text-orange-400 font-semibold">VS</div>
                           </div>
                           <Link to={`/equipe/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
                             <span className="text-white text-sm truncate hover:text-primary-400">{match.team2_name}</span>
