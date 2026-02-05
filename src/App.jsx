@@ -14,6 +14,8 @@ import TournamentsPage from './pages/TournamentsPage';
 import TournamentDetailPage from './pages/TournamentDetailPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
+import TeamsPage from './pages/TeamsPage';
+import TeamPage from './pages/TeamPage';
 
 // Admin Pages
 import AdminLayout from './components/AdminLayout';
@@ -23,6 +25,7 @@ import AdminMatches from './pages/admin/AdminMatches';
 import AdminTournaments from './pages/admin/AdminTournaments';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminScoring from './pages/admin/AdminScoring';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -49,6 +52,8 @@ function AppContent() {
         <Route path="/matchs" element={<MatchesPage />} />
         <Route path="/tournois" element={<TournamentsPage />} />
         <Route path="/tournois/:id" element={<TournamentDetailPage />} />
+        <Route path="/equipes" element={<TeamsPage />} />
+        <Route path="/equipe/:id" element={<TeamPage />} />
         <Route path="/classement" element={<LeaderboardPage />} />
         <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
@@ -59,6 +64,7 @@ function AppContent() {
           <Route path="matchs" element={<AdminMatches />} />
           <Route path="tournois" element={<AdminTournaments />} />
           <Route path="utilisateurs" element={<AdminUsers />} />
+          <Route path="scoring" element={<AdminScoring />} />
           <Route path="parametres" element={<AdminSettings />} />
         </Route>
 
