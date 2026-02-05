@@ -74,9 +74,18 @@ const TeamPage = () => {
     return <span className={textSize}>{flagUrl}</span>;
   };
 
+  // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
     return new Date() < new Date(match.match_date);
+  };
+
+  // Check if match is within 24 hours
+  const isWithin24Hours = (matchDate) => {
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diff = match - now;
+    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
   };
 
   const getTimeRemaining = (matchDate) => {
@@ -85,7 +94,8 @@ const TeamPage = () => {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     if (hours > 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
-    return `${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   const handlePredictionChange = (matchId, field, value) => {
@@ -118,16 +128,14 @@ const TeamPage = () => {
     }
   };
 
-  // Calculate stats
+  // Calculate stats from completed matches
   const completedMatches = matches.filter(m => m.status === 'completed');
-  const upcomingMatches = matches.filter(m => m.status === 'upcoming');
   const liveMatches = matches.filter(m => m.status === 'live');
-
-  // Separate matches within 24 hours
-  const now = new Date();
-  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const matchesWithin24Hours = upcomingMatches.filter(m => new Date(m.match_date) <= in24Hours);
-  const matchesAfter24Hours = upcomingMatches.filter(m => new Date(m.match_date) > in24Hours);
+  
+  // Only show upcoming matches within 24h
+  const upcomingMatches = matches
+    .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
 
   const stats = { played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
   completedMatches.forEach(m => {
@@ -179,7 +187,7 @@ const TeamPage = () => {
       <motion.div 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
-        className={`card ${highlight ? 'border-orange-500/50 bg-orange-500/5' : ''} ${completed ? 'opacity-80' : ''} ${live ? 'border-red-500/50' : ''}`}
+        className={`card ${highlight ? 'border-orange-500/30 bg-orange-500/5' : ''} ${completed ? 'opacity-80' : ''} ${live ? 'border-red-500/50' : ''}`}
       >
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center space-x-2">
@@ -209,11 +217,13 @@ const TeamPage = () => {
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex-1 text-center">
+          {/* Team 1 - Centered flag above name */}
+          <div className="flex-1 flex flex-col items-center">
             {renderFlag(match.team1_flag, match.team1_name, 'sm')}
-            <p className="text-white font-semibold mt-2 text-sm">{match.team1_name}</p>
+            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
           </div>
           
+          {/* Score/Prediction */}
           <div className="flex-1 flex flex-col items-center">
             {(completed || live) ? (
               <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
@@ -249,9 +259,10 @@ const TeamPage = () => {
             </p>
           </div>
           
-          <div className="flex-1 text-center">
+          {/* Team 2 - Centered flag above name */}
+          <div className="flex-1 flex flex-col items-center">
             {renderFlag(match.team2_flag, match.team2_name, 'sm')}
-            <p className="text-white font-semibold mt-2 text-sm">{match.team2_name}</p>
+            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
           </div>
         </div>
 
@@ -349,31 +360,16 @@ const TeamPage = () => {
         )}
 
         {/* Matches Within 24 Hours - Special Highlight */}
-        {matchesWithin24Hours.length > 0 && (
+        {upcomingMatches.length > 0 && (
           <section className="mb-8">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
               <span className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
-              <span>Dans les prochaines 24h</span>
+              <span>À venir</span>
               <span className="text-sm font-normal text-orange-400">Pronostiquez maintenant !</span>
             </h2>
             <div className="space-y-4">
-              {matchesWithin24Hours.map(match => (
+              {upcomingMatches.map(match => (
                 <MatchCard key={match.id} match={match} highlight />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Other Upcoming Matches */}
-        {matchesAfter24Hours.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-blue-400" />
-              <span>À venir</span>
-            </h2>
-            <div className="space-y-4">
-              {matchesAfter24Hours.map(match => (
-                <MatchCard key={match.id} match={match} />
               ))}
             </div>
           </section>
@@ -394,10 +390,11 @@ const TeamPage = () => {
           </section>
         )}
 
-        {matches.length === 0 && (
+        {upcomingMatches.length === 0 && liveMatches.length === 0 && completedMatches.length === 0 && (
           <div className="card text-center py-12">
             <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Aucun match programmé pour cette équipe</p>
+            <p className="text-gray-400">Aucun match disponible pour cette équipe</p>
+            <p className="text-gray-500 text-sm mt-2">Les matchs apparaissent 24h avant le coup d'envoi</p>
           </div>
         )}
       </div>
