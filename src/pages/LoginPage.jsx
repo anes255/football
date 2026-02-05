@@ -1,42 +1,41 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Phone, Lock, LogIn, Trophy, AlertCircle } from 'lucide-react';
+import { Phone, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const LoginPage = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const [formData, setFormData] = useState({ phone: '', password: '' });
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    e.stopPropagation();
     
-    setError('');
+    if (!phone || !password) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
     setLoading(true);
-    
     try {
-      await login(formData.phone, formData.password);
-      toast.success('Connexion réussie !');
+      await login({ phone, password });
+      toast.success('Connexion réussie!');
       navigate('/');
-    } catch (err) {
-      console.error('Login error:', err);
-      const errorMessage = err.response?.data?.error || 'Identifiants incorrects';
-      setError(errorMessage);
-      toast.error(errorMessage);
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error(error.response?.data?.error || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
-    
-    return false;
   };
 
   return (
-    <div className="min-h-screen pt-20 flex items-center justify-center px-4">
+    <div className="min-h-screen pt-20 px-4 flex items-center justify-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -44,21 +43,9 @@ const LoginPage = () => {
       >
         <div className="card">
           <div className="text-center mb-8">
-            <Trophy className="w-16 h-16 text-primary-500 mx-auto mb-4" />
-            <h1 className="font-display text-4xl gradient-text tracking-wider">Connexion</h1>
-            <p className="text-gray-400 mt-2">Accédez à votre compte de pronostics</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Connexion</h1>
+            <p className="text-gray-400">Connectez-vous à votre compte</p>
           </div>
-
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center space-x-3"
-            >
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
-            </motion.div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -66,14 +53,13 @@ const LoginPage = () => {
                 Numéro de téléphone
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                  placeholder="0600000000"
-                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="0665448641"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
                 />
               </div>
             </div>
@@ -83,25 +69,31 @@ const LoginPage = () => {
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  required
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full flex items-center justify-center space-x-2"
+              className="w-full btn-primary py-3 flex items-center justify-center space-x-2"
             >
               {loading ? (
-                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
@@ -112,8 +104,8 @@ const LoginPage = () => {
           </form>
 
           <p className="text-center text-gray-400 mt-6">
-            Pas encore de compte ?{' '}
-            <Link to="/inscription" className="text-primary-500 hover:text-primary-400 font-semibold">
+            Pas encore de compte?{' '}
+            <Link to="/inscription" className="text-primary-400 hover:text-primary-300">
               S'inscrire
             </Link>
           </p>
