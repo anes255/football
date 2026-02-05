@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Palette, Trophy, Save, RefreshCw } from 'lucide-react';
+import { Settings, Palette, Trophy, Save, Image, Upload, X } from 'lucide-react';
 import { adminAPI, teamsAPI, tournamentsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const AdminSettings = () => {
   const [scoringRules, setScoringRules] = useState({});
-  const [colors, setColors] = useState({
+  const [settings, setSettings] = useState({
     primary_color: '#6366f1',
     accent_color: '#8b5cf6',
     bg_color: '#0f172a',
-    card_color: '#1e293b'
+    card_color: '#1e293b',
+    site_logo: '',
+    site_name: 'Prediction World'
   });
   const [teams, setTeams] = useState([]);
   const [tournaments, setTournaments] = useState([]);
@@ -33,11 +35,11 @@ const AdminSettings = () => {
       ]);
       
       const rulesObj = {};
-      rulesRes.data.forEach(r => { rulesObj[r.rule_type] = r.points; });
+      (rulesRes.data || []).forEach(r => { rulesObj[r.rule_type] = r.points; });
       setScoringRules(rulesObj);
-      setColors({ ...colors, ...settingsRes.data });
-      setTeams(teamsRes.data);
-      setTournaments(tournamentsRes.data);
+      setSettings({ ...settings, ...settingsRes.data });
+      setTeams(teamsRes.data || []);
+      setTournaments(tournamentsRes.data || []);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Erreur de chargement');
@@ -50,8 +52,28 @@ const AdminSettings = () => {
     setScoringRules({ ...scoringRules, [ruleType]: parseInt(value) || 0 });
   };
 
-  const handleColorChange = (key, value) => {
-    setColors({ ...colors, [key]: value });
+  const handleSettingChange = (key, value) => {
+    setSettings({ ...settings, [key]: value });
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 1000000) { // 1MB limit
+      toast.error('Image trop grande (max 1MB)');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSettings({ ...settings, site_logo: reader.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setSettings({ ...settings, site_logo: '' });
   };
 
   const saveScoringRules = async () => {
@@ -66,12 +88,12 @@ const AdminSettings = () => {
     }
   };
 
-  const saveColors = async () => {
+  const saveSettings = async () => {
     setSaving(true);
     try {
-      await adminAPI.updateSettings(colors);
-      toast.success('Couleurs mises à jour');
-      applyColors(colors);
+      await adminAPI.updateSettings(settings);
+      toast.success('Paramètres mis à jour');
+      applyColors(settings);
     } catch (error) {
       toast.error('Erreur');
     } finally {
@@ -132,8 +154,91 @@ const AdminSettings = () => {
         <span>Paramètres</span>
       </h1>
 
-      {/* Scoring Rules */}
+      {/* Site Branding */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white flex items-center space-x-2">
+            <Image className="w-5 h-5 text-blue-500" />
+            <span>Branding du Site</span>
+          </h2>
+          <button onClick={saveSettings} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
+            <Save className="w-4 h-4" />
+            <span>Sauvegarder</span>
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Site Name */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Nom du site</label>
+            <input
+              type="text"
+              value={settings.site_name || ''}
+              onChange={(e) => handleSettingChange('site_name', e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
+              placeholder="Prediction World"
+            />
+          </div>
+
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Logo du site (affiché sur la page d'accueil)</label>
+            <div className="flex items-center space-x-4">
+              {settings.site_logo ? (
+                <div className="relative">
+                  <img 
+                    src={settings.site_logo} 
+                    alt="Logo" 
+                    className="w-20 h-20 object-contain rounded-xl bg-white/5 p-2"
+                  />
+                  <button 
+                    onClick={removeLogo}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-xl bg-white/5 flex items-center justify-center">
+                  <Image className="w-8 h-8 text-gray-500" />
+                </div>
+              )}
+              <label className="btn-secondary cursor-pointer flex items-center space-x-2">
+                <Upload className="w-4 h-4" />
+                <span>Télécharger logo</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleLogoUpload} 
+                  className="hidden" 
+                />
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Format: PNG, JPG. Max 1MB. Ce logo remplacera l'icône par défaut sur la page d'accueil.</p>
+          </div>
+        </div>
+
+        {/* Preview */}
+        {settings.site_logo && (
+          <div className="mt-6 p-4 bg-white/5 rounded-xl">
+            <p className="text-sm text-gray-400 mb-3">Aperçu sur la page d'accueil:</p>
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 mb-4">
+                  <img src={settings.site_logo} alt="Logo" className="w-16 h-16 object-contain" />
+                </div>
+                <h2 className="text-2xl font-bold">
+                  <span className="gradient-text">{settings.site_name || 'Prediction'}</span>
+                  <span className="text-white"> World</span>
+                </h2>
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Scoring Rules */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
             <Trophy className="w-5 h-5 text-yellow-500" />
@@ -180,20 +285,19 @@ const AdminSettings = () => {
             <li>• Prono <span className="text-green-400">2-1</span> = {scoringRules.exact_score || 0} pts (score exact)</li>
             <li>• Prono <span className="text-yellow-400">3-2</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_diff || 0)} pts (bon vainqueur + même diff buts)</li>
             <li>• Prono <span className="text-yellow-400">2-0</span> = {(scoringRules.correct_winner || 0) + (scoringRules.one_team_goals || 0)} pts (bon vainqueur + buts équipe 1)</li>
-            <li>• Prono <span className="text-yellow-400">3-1</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_diff || 0) + (scoringRules.one_team_goals || 0)} pts (vainqueur + diff + équipe 2)</li>
             <li>• Prono <span className="text-red-400">0-2</span> = 0 pts (mauvais vainqueur)</li>
           </ul>
         </div>
       </motion.div>
 
       {/* Site Colors */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
             <Palette className="w-5 h-5 text-purple-500" />
             <span>Couleurs du Site</span>
           </h2>
-          <button onClick={saveColors} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
+          <button onClick={saveSettings} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
             <Save className="w-4 h-4" />
             <span>Sauvegarder</span>
           </button>
@@ -214,14 +318,14 @@ const AdminSettings = () => {
               <div className="flex items-center space-x-3">
                 <input
                   type="color"
-                  value={colors[key] || '#6366f1'}
-                  onChange={(e) => handleColorChange(key, e.target.value)}
+                  value={settings[key] || '#6366f1'}
+                  onChange={(e) => handleSettingChange(key, e.target.value)}
                   className="w-12 h-12 rounded-lg cursor-pointer border-2 border-white/20"
                 />
                 <input
                   type="text"
-                  value={colors[key] || ''}
-                  onChange={(e) => handleColorChange(key, e.target.value)}
+                  value={settings[key] || ''}
+                  onChange={(e) => handleSettingChange(key, e.target.value)}
                   className="w-24 bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm"
                 />
               </div>
@@ -230,18 +334,18 @@ const AdminSettings = () => {
         </div>
 
         {/* Color Preview */}
-        <div className="mt-6 p-4 rounded-xl" style={{ backgroundColor: colors.card_color }}>
+        <div className="mt-6 p-4 rounded-xl" style={{ backgroundColor: settings.card_color }}>
           <h3 className="font-medium mb-3 text-white">Aperçu</h3>
           <div className="flex space-x-3">
             <button 
               className="px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: colors.primary_color }}
+              style={{ backgroundColor: settings.primary_color }}
             >
               Bouton Primaire
             </button>
             <button 
               className="px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: colors.accent_color }}
+              style={{ backgroundColor: settings.accent_color }}
             >
               Bouton Accent
             </button>
@@ -250,7 +354,7 @@ const AdminSettings = () => {
       </motion.div>
 
       {/* Award Tournament Winner */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card">
         <h2 className="text-xl font-bold text-white flex items-center space-x-2 mb-6">
           <Trophy className="w-5 h-5 text-yellow-500" />
           <span>Attribuer Bonus Vainqueur Tournoi</span>
