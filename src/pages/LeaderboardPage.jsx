@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Award, Users } from 'lucide-react';
+import { Trophy, Medal, Award, Users, Eye } from 'lucide-react';
 import { leaderboardAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import UserPredictionsModal from '../components/UserPredictionsModal';
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -54,7 +56,7 @@ const LeaderboardPage = () => {
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold gradient-text mb-2">Classement</h1>
-          <p className="text-gray-400">{leaderboard.length} joueurs</p>
+          <p className="text-gray-400">{leaderboard.length} joueurs • Cliquez sur un joueur pour voir ses pronostics</p>
         </div>
 
         {/* Your Rank */}
@@ -89,33 +91,33 @@ const LeaderboardPage = () => {
             className="flex justify-center items-end space-x-4 mb-8"
           >
             {/* 2nd Place */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-gray-400 flex items-center justify-center">
+            <div className="text-center cursor-pointer" onClick={() => setSelectedUser(leaderboard[1])}>
+              <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-gray-400 flex items-center justify-center hover:scale-110 transition-transform">
                 <span className="text-2xl font-bold text-black">2</span>
               </div>
-              <div className="bg-gray-400/20 rounded-t-lg px-4 py-6 h-24">
+              <div className="bg-gray-400/20 rounded-t-lg px-4 py-6 h-24 hover:bg-gray-400/30 transition-colors">
                 <p className="text-white font-semibold text-sm truncate max-w-[80px]">{leaderboard[1]?.name}</p>
                 <p className="text-gray-300 font-bold">{leaderboard[1]?.total_points || 0}</p>
               </div>
             </div>
             
             {/* 1st Place */}
-            <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-yellow-500 flex items-center justify-center">
+            <div className="text-center cursor-pointer" onClick={() => setSelectedUser(leaderboard[0])}>
+              <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-yellow-500 flex items-center justify-center hover:scale-110 transition-transform">
                 <Trophy className="w-10 h-10 text-black" />
               </div>
-              <div className="bg-yellow-500/20 rounded-t-lg px-4 py-6 h-32">
+              <div className="bg-yellow-500/20 rounded-t-lg px-4 py-6 h-32 hover:bg-yellow-500/30 transition-colors">
                 <p className="text-white font-semibold truncate max-w-[80px]">{leaderboard[0]?.name}</p>
                 <p className="text-yellow-400 font-bold text-xl">{leaderboard[0]?.total_points || 0}</p>
               </div>
             </div>
             
             {/* 3rd Place */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-orange-500 flex items-center justify-center">
+            <div className="text-center cursor-pointer" onClick={() => setSelectedUser(leaderboard[2])}>
+              <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-orange-500 flex items-center justify-center hover:scale-110 transition-transform">
                 <span className="text-2xl font-bold text-white">3</span>
               </div>
-              <div className="bg-orange-500/20 rounded-t-lg px-4 py-6 h-20">
+              <div className="bg-orange-500/20 rounded-t-lg px-4 py-6 h-20 hover:bg-orange-500/30 transition-colors">
                 <p className="text-white font-semibold text-sm truncate max-w-[80px]">{leaderboard[2]?.name}</p>
                 <p className="text-orange-400 font-bold">{leaderboard[2]?.total_points || 0}</p>
               </div>
@@ -138,7 +140,8 @@ const LeaderboardPage = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className={`flex items-center justify-between p-4 rounded-xl border ${getRankBg(index)} ${
+                  onClick={() => setSelectedUser(player)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer hover:scale-[1.02] transition-all ${getRankBg(index)} ${
                     user && player.id === user.id ? 'ring-2 ring-primary-500' : ''
                   }`}
                 >
@@ -158,21 +161,34 @@ const LeaderboardPage = () => {
                           <span className="text-xs text-primary-400">(Vous)</span>
                         )}
                       </p>
+                      <p className="text-xs text-gray-400">{player.total_predictions || 0} pronostics</p>
                     </div>
                   </div>
-                  <p className={`text-xl font-bold ${
-                    index === 0 ? 'text-yellow-400' :
-                    index === 1 ? 'text-gray-300' :
-                    index === 2 ? 'text-orange-400' : 'text-primary-400'
-                  }`}>
-                    {player.total_points || 0}
-                  </p>
+                  <div className="flex items-center space-x-3">
+                    <p className={`text-xl font-bold ${
+                      index === 0 ? 'text-yellow-400' :
+                      index === 1 ? 'text-gray-300' :
+                      index === 2 ? 'text-orange-400' : 'text-primary-400'
+                    }`}>
+                      {player.total_points || 0}
+                    </p>
+                    <Eye className="w-4 h-4 text-gray-500" />
+                  </div>
                 </motion.div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* User Predictions Modal */}
+      {selectedUser && (
+        <UserPredictionsModal
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+          onClose={() => setSelectedUser(null)}
+        />
+      )}
     </div>
   );
 };
