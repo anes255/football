@@ -16,7 +16,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 
 // Admin Pages
-import AdminLayout from './pages/admin/AdminLayout';
+import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminTeams from './pages/admin/AdminTeams';
 import AdminMatches from './pages/admin/AdminMatches';
