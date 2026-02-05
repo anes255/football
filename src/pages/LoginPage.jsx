@@ -58,7 +58,7 @@ const LoginPage = () => {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0665448641"
+                  placeholder="0000000000"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
                 />
               </div>
