@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Home, Trophy, Calendar, Award, User, LogOut, Shield, Globe } from 'lucide-react';
+import { Menu, X, Home, Trophy, Calendar, Award, User, LogOut, Shield, Globe, Flag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -19,6 +19,7 @@ const Navbar = () => {
   const navLinks = [
     { to: '/', label: 'Accueil', icon: Home },
     { to: '/tournois', label: 'Tournois', icon: Trophy },
+    { to: '/equipes', label: 'Équipes', icon: Flag },
     { to: '/matchs', label: 'Matchs', icon: Calendar },
     { to: '/classement', label: 'Classement', icon: Award },
   ];
