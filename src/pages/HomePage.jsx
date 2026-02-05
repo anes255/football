@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, Calendar, Award, ArrowRight, Users, Target } from 'lucide-react';
-import { tournamentsAPI, matchesAPI, leaderboardAPI } from '../api';
+import { tournamentsAPI, matchesAPI, leaderboardAPI, settingsAPI } from '../api';
 
 const HomePage = () => {
   const [tournaments, setTournaments] = useState([]);
   const [matches, setMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [settings, setSettings] = useState({ site_logo: '', site_name: 'Prediction' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,16 +17,18 @@ const HomePage = () => {
 
   const fetchData = async () => {
     try {
-      const [tourRes, matchRes, leadRes] = await Promise.all([
+      const [tourRes, matchRes, leadRes, settingsRes] = await Promise.all([
         tournamentsAPI.getActive().catch(() => ({ data: [] })),
         matchesAPI.getVisible().catch(() => ({ data: [] })),
-        leaderboardAPI.getAll().catch(() => ({ data: [] }))
+        leaderboardAPI.getAll().catch(() => ({ data: [] })),
+        settingsAPI.get().catch(() => ({ data: {} }))
       ]);
       
       setTournaments(tourRes.data?.slice(0, 2) || []);
       const upcoming = (matchRes.data || []).filter(m => m.status === 'upcoming');
       setMatches(upcoming.slice(0, 4));
       setLeaderboard(leadRes.data?.slice(0, 5) || []);
+      setSettings({ ...settings, ...settingsRes.data });
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -69,7 +72,11 @@ const HomePage = () => {
             animate={{ scale: 1, opacity: 1 }}
             className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-6"
           >
-            <Trophy className="w-10 h-10 text-white" />
+            {settings.site_logo ? (
+              <img src={settings.site_logo} alt="Logo" className="w-16 h-16 object-contain" />
+            ) : (
+              <Trophy className="w-10 h-10 text-white" />
+            )}
           </motion.div>
 
           <motion.h1
@@ -78,7 +85,7 @@ const HomePage = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold mb-4"
           >
-            <span className="gradient-text">Prediction</span>
+            <span className="gradient-text">{settings.site_name || 'Prediction'}</span>
             <span className="text-white"> World</span>
           </motion.h1>
 
@@ -167,18 +174,18 @@ const HomePage = () => {
                     {matches.map((match) => (
                       <div key={match.id} className="py-4 first:pt-0 last:pb-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <Link to={`/equipe/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
                             {renderFlag(match.team1_flag, match.team1_name)}
-                            <span className="text-white text-sm truncate">{match.team1_name}</span>
-                          </div>
+                            <span className="text-white text-sm truncate hover:text-primary-400">{match.team1_name}</span>
+                          </Link>
                           <div className="px-3 text-center shrink-0">
                             <div className="text-xs text-gray-500">{formatDate(match.match_date)}</div>
                             <div className="text-primary-400 font-semibold">VS</div>
                           </div>
-                          <div className="flex items-center space-x-2 flex-1 min-w-0 justify-end">
-                            <span className="text-white text-sm truncate">{match.team2_name}</span>
+                          <Link to={`/equipe/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
+                            <span className="text-white text-sm truncate hover:text-primary-400">{match.team2_name}</span>
                             {renderFlag(match.team2_flag, match.team2_name)}
-                          </div>
+                          </Link>
                         </div>
                       </div>
                     ))}
