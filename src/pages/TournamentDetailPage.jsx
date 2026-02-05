@@ -25,9 +25,10 @@ const TournamentDetailPage = () => {
 
   const fetchData = async () => {
     try {
+      // Use getByTournament to get ALL matches, then filter on frontend
       const [tourRes, matchesRes, teamsRes] = await Promise.all([
         tournamentsAPI.getById(id),
-        matchesAPI.getByTournamentVisible(id),
+        matchesAPI.getByTournament(id),  // Changed from getByTournamentVisible
         tournamentsAPI.getTeams(id)
       ]);
       
@@ -36,10 +37,14 @@ const TournamentDetailPage = () => {
       setTournamentTeams(teamsRes.data || []);
 
       if (user) {
-        const predRes = await predictionsAPI.getMyPredictions();
-        const predMap = {};
-        predRes.data.forEach(p => { predMap[p.match_id] = p; });
-        setPredictions(predMap);
+        try {
+          const predRes = await predictionsAPI.getMyPredictions();
+          const predMap = {};
+          (predRes.data || []).forEach(p => { predMap[p.match_id] = p; });
+          setPredictions(predMap);
+        } catch (e) {
+          console.error('Error fetching predictions:', e);
+        }
 
         try {
           const winnerRes = await tournamentWinnerAPI.get(id);
@@ -62,14 +67,24 @@ const TournamentDetailPage = () => {
     return <span className="text-xl">{flagUrl}</span>;
   };
 
+  // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
     return new Date() < new Date(match.match_date);
   };
 
+  // Check if match is within 24 hours (for visibility to users)
+  const isWithin24Hours = (matchDate) => {
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diff = match - now;
+    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+  };
+
   const canPredictWinner = () => {
     if (!matches.length) return true;
-    const firstMatch = matches.sort((a, b) => new Date(a.match_date) - new Date(b.match_date))[0];
+    const sortedMatches = [...matches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    const firstMatch = sortedMatches[0];
     return new Date() < new Date(firstMatch.match_date);
   };
 
@@ -79,7 +94,8 @@ const TournamentDetailPage = () => {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     if (hours > 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
-    return `${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   const handlePredictionChange = (matchId, field, value) => {
@@ -141,8 +157,14 @@ const TournamentDetailPage = () => {
     return acc;
   }, {});
 
-  const upcomingMatches = matches.filter(m => m.status === 'upcoming');
+  // Filter matches: only show upcoming matches within 24h to users (completed always visible)
   const completedMatches = matches.filter(m => m.status === 'completed');
+  const liveMatches = matches.filter(m => m.status === 'live');
+  
+  // Only show upcoming matches that are within 24 hours
+  const upcomingMatches = matches
+    .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
 
   if (loading) {
     return (
@@ -189,46 +211,53 @@ const TournamentDetailPage = () => {
             )}
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-white">{tournament.name}</h1>
-              {tournament.description && <p className="text-gray-400">{tournament.description}</p>}
-              <p className="text-sm text-gray-500 mt-1">{matches.length} matchs • {tournamentTeams.length} équipes</p>
+              {tournament.description && <p className="text-gray-400 mt-1">{tournament.description}</p>}
+              <div className="flex items-center space-x-4 mt-3">
+                <span className="text-sm text-gray-400 flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{matches.length} matchs</span>
+                </span>
+                <span className="text-sm text-gray-400 flex items-center space-x-1">
+                  <Users className="w-4 h-4" />
+                  <span>{tournamentTeams.length} équipes</span>
+                </span>
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Winner Prediction Card */}
-        {user && tournamentTeams.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
-            <div className="flex items-center space-x-3 mb-4">
-              <Crown className="w-6 h-6 text-yellow-500" />
-              <h2 className="text-xl font-bold text-white">Prédire le Vainqueur</h2>
+        {/* Winner Prediction */}
+        {user && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card mb-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Crown className="w-5 h-5 text-yellow-500" />
+              <h2 className="text-lg font-bold text-white">Prédire le vainqueur</h2>
             </div>
             
-            {winnerPrediction && !canPredictWinner() ? (
-              <div className="flex items-center space-x-4 p-4 bg-white/5 rounded-xl">
-                {renderFlag(winnerPrediction.flag_url, winnerPrediction.team_name)}
-                <div>
-                  <p className="text-white font-semibold">{winnerPrediction.team_name}</p>
-                  <p className="text-sm text-green-400">✓ Votre prédiction</p>
-                </div>
-              </div>
-            ) : canPredictWinner() ? (
+            {canPredictWinner() ? (
               <div className="flex items-center space-x-4">
                 <select
                   value={selectedWinner}
                   onChange={(e) => setSelectedWinner(e.target.value)}
                   className="flex-1 bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
                 >
-                  <option value="">Choisir le vainqueur...</option>
+                  <option value="">Sélectionner une équipe</option>
                   {tournamentTeams.map(team => (
                     <option key={team.team_id} value={team.team_id}>{team.name}</option>
                   ))}
                 </select>
                 <button onClick={submitWinnerPrediction} className="btn-primary">
-                  Valider
+                  {winnerPrediction ? 'Modifier' : 'Valider'}
                 </button>
               </div>
             ) : (
-              <p className="text-gray-400">Le tournoi a commencé, vous ne pouvez plus changer votre prédiction.</p>
+              <p className="text-gray-400">Les prédictions de vainqueur sont fermées</p>
+            )}
+            
+            {winnerPrediction && (
+              <p className="text-green-400 text-sm mt-3">
+                ✓ Votre prédiction: {tournamentTeams.find(t => t.team_id === winnerPrediction.team_id)?.name}
+              </p>
             )}
           </motion.div>
         )}
@@ -237,26 +266,24 @@ const TournamentDetailPage = () => {
         <div className="flex space-x-2 mb-6">
           <button
             onClick={() => setActiveTab('matches')}
-            className={`px-4 py-2 rounded-xl font-medium transition-all ${
-              activeTab === 'matches' ? 'bg-primary-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'matches' ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'
             }`}
           >
-            <Calendar className="w-4 h-4 inline mr-2" />
             Matchs
           </button>
           <button
-            onClick={() => setActiveTab('groups')}
-            className={`px-4 py-2 rounded-xl font-medium transition-all ${
-              activeTab === 'groups' ? 'bg-primary-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            onClick={() => setActiveTab('teams')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'teams' ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'
             }`}
           >
-            <Users className="w-4 h-4 inline mr-2" />
-            Groupes
+            Équipes
           </button>
         </div>
 
-        {/* Groups Tab */}
-        {activeTab === 'groups' && (
+        {/* Teams Tab */}
+        {activeTab === 'teams' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {Object.keys(groupedTeams).length === 0 ? (
               <div className="card text-center py-12">
@@ -277,13 +304,17 @@ const TournamentDetailPage = () => {
                     </div>
                     <div className="space-y-3">
                       {teams.map((team, index) => (
-                        <div key={team.team_id} className="flex items-center space-x-3 p-2 bg-white/5 rounded-lg">
+                        <Link 
+                          to={`/equipe/${team.team_id}`} 
+                          key={team.team_id} 
+                          className="flex items-center space-x-3 p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                        >
                           <span className="w-6 h-6 flex items-center justify-center bg-white/10 rounded-full text-sm text-gray-400">
                             {index + 1}
                           </span>
                           {renderFlag(team.flag_url, team.name)}
-                          <span className="text-white font-medium text-sm flex-1 truncate">{team.name}</span>
-                        </div>
+                          <span className="text-white font-medium text-sm flex-1 truncate hover:text-primary-400">{team.name}</span>
+                        </Link>
                       ))}
                     </div>
                   </motion.div>
@@ -296,12 +327,46 @@ const TournamentDetailPage = () => {
         {/* Matches Tab */}
         {activeTab === 'matches' && (
           <>
-            {/* Upcoming Matches */}
+            {/* Live Matches */}
+            {liveMatches.length > 0 && (
+              <section className="mb-8">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+                  <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                  <span>En cours</span>
+                </h2>
+                <div className="space-y-4">
+                  {liveMatches.map(match => (
+                    <div key={match.id} className="card border-red-500/50">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
+                        <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 flex flex-col items-center">
+                          {renderFlag(match.team1_flag, match.team1_name)}
+                          <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                          {renderFlag(match.team2_flag, match.team2_name)}
+                          <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Upcoming Matches (within 24h only) */}
             {upcomingMatches.length > 0 && (
               <section className="mb-8">
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-blue-400" />
+                  <Calendar className="w-5 h-5 text-orange-400" />
                   <span>À venir</span>
+                  <span className="text-sm font-normal text-orange-400">(dans les 24h)</span>
                 </h2>
                 <div className="space-y-4">
                   {upcomingMatches.map(match => {
@@ -313,19 +378,19 @@ const TournamentDetailPage = () => {
                     };
 
                     return (
-                      <div key={match.id} className="card">
+                      <div key={match.id} className="card border-orange-500/30 bg-orange-500/5">
                         <div className="flex justify-between items-center mb-3">
                           <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
-                          <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full flex items-center space-x-1">
+                          <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full flex items-center space-x-1 animate-pulse">
                             <Clock className="w-3 h-3" />
                             <span>{getTimeRemaining(match.match_date)}</span>
                           </span>
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <div className="flex-1 text-center">
+                          <div className="flex-1 flex flex-col items-center">
                             {renderFlag(match.team1_flag, match.team1_name)}
-                            <p className="text-white font-semibold mt-2 text-sm">{match.team1_name}</p>
+                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
                           </div>
                           
                           <div className="flex-1 flex flex-col items-center">
@@ -337,7 +402,7 @@ const TournamentDetailPage = () => {
                                   max="20"
                                   value={input.team1_score}
                                   onChange={(e) => handlePredictionChange(match.id, 'team1_score', e.target.value)}
-                                  className="w-12 bg-gray-700 border border-gray-600 rounded-lg py-2 text-white text-center"
+                                  className="w-12 bg-gray-700 border border-orange-500/50 rounded-lg py-2 text-white text-center"
                                 />
                                 <span className="text-gray-400">-</span>
                                 <input
@@ -346,7 +411,7 @@ const TournamentDetailPage = () => {
                                   max="20"
                                   value={input.team2_score}
                                   onChange={(e) => handlePredictionChange(match.id, 'team2_score', e.target.value)}
-                                  className="w-12 bg-gray-700 border border-gray-600 rounded-lg py-2 text-white text-center"
+                                  className="w-12 bg-gray-700 border border-orange-500/50 rounded-lg py-2 text-white text-center"
                                 />
                               </div>
                             ) : existingPred ? (
@@ -355,19 +420,19 @@ const TournamentDetailPage = () => {
                               <span className="text-gray-500">VS</span>
                             )}
                             <p className="text-xs text-gray-500 mt-2">
-                              {new Date(match.match_date).toLocaleDateString('fr-FR')}
+                              {new Date(match.match_date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                           
-                          <div className="flex-1 text-center">
+                          <div className="flex-1 flex flex-col items-center">
                             {renderFlag(match.team2_flag, match.team2_name)}
-                            <p className="text-white font-semibold mt-2 text-sm">{match.team2_name}</p>
+                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
                           </div>
                         </div>
 
                         {canPredict && user && (
                           <div className="mt-4 flex justify-center">
-                            <button onClick={() => submitPrediction(match.id)} className="btn-primary text-sm">
+                            <button onClick={() => submitPrediction(match.id)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
                               {existingPred ? 'Modifier' : 'Valider'}
                             </button>
                           </div>
@@ -408,16 +473,16 @@ const TournamentDetailPage = () => {
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <div className="flex-1 text-center">
+                          <div className="flex-1 flex flex-col items-center">
                             {renderFlag(match.team1_flag, match.team1_name)}
-                            <p className="text-white font-semibold mt-2 text-sm">{match.team1_name}</p>
+                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
                           </div>
-                          <div className="flex-1 text-center">
+                          <div className="flex-1 flex flex-col items-center">
                             <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
                           </div>
-                          <div className="flex-1 text-center">
+                          <div className="flex-1 flex flex-col items-center">
                             {renderFlag(match.team2_flag, match.team2_name)}
-                            <p className="text-white font-semibold mt-2 text-sm">{match.team2_name}</p>
+                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
                           </div>
                         </div>
 
@@ -434,10 +499,11 @@ const TournamentDetailPage = () => {
               </section>
             )}
 
-            {matches.length === 0 && (
+            {upcomingMatches.length === 0 && liveMatches.length === 0 && completedMatches.length === 0 && (
               <div className="card text-center py-12">
                 <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucun match programmé</p>
+                <p className="text-gray-400">Aucun match disponible</p>
+                <p className="text-gray-500 text-sm mt-2">Les matchs apparaissent 24h avant le coup d'envoi</p>
               </div>
             )}
           </>
