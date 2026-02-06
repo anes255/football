@@ -65,8 +65,12 @@ export const matchesAPI = {
   canPredict: (id) => api.get(`/matches/${id}/can-predict`),
   create: (data) => api.post('/matches', data),
   update: (id, data) => api.put(`/matches/${id}`, data),
-  setResult: (id, data) => api.put(`/matches/${id}/result`, data),
   delete: (id) => api.delete(`/matches/${id}`),
+  // Match control endpoints
+  startMatch: (id) => api.put(`/matches/${id}/start`),
+  updateScore: (id, data) => api.put(`/matches/${id}/score`, data),
+  completeMatch: (id, data) => api.put(`/matches/${id}/complete`, data),
+  setResult: (id, data) => api.put(`/matches/${id}/result`, data),
 };
 
 export const predictionsAPI = {
