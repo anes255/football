@@ -44,11 +44,16 @@ const TournamentDetailPage = () => {
       
       setTournament(tourRes.data);
       
-      // Fetch matches for this tournament
+      // Fetch ALL visible matches and filter by tournament on frontend
+      // Use getVisible() which is PUBLIC (no auth required)
       try {
-        const matchesRes = await matchesAPI.getByTournament(id);
-        console.log('Matches response:', matchesRes.data);
-        setMatches(matchesRes.data || []);
+        const matchesRes = await matchesAPI.getVisible();
+        console.log('All matches response:', matchesRes.data);
+        const allMatches = matchesRes.data || [];
+        // Filter matches for this tournament
+        const tournamentMatches = allMatches.filter(m => m.tournament_id === parseInt(id));
+        console.log('Filtered tournament matches:', tournamentMatches);
+        setMatches(tournamentMatches);
       } catch (matchErr) {
         console.error('Error fetching matches:', matchErr);
         setMatches([]);
@@ -107,7 +112,7 @@ const TournamentDetailPage = () => {
     return now < matchDate;
   };
 
-  // Check if match is within 24 hours (visible to users)
+  // Check if match is within 24 hours (for display purposes)
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
@@ -196,13 +201,11 @@ const TournamentDetailPage = () => {
     return acc;
   }, {});
 
-  // Filter matches: only show upcoming matches within 24h to users (completed always visible)
+  // Filter matches by status
   const completedMatches = matches.filter(m => m.status === 'completed');
   const liveMatches = matches.filter(m => m.status === 'live');
-  
-  // Only show upcoming matches that are within 24 hours
   const upcomingMatches = matches
-    .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+    .filter(m => m.status === 'upcoming')
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
 
   if (loading) {
@@ -254,7 +257,7 @@ const TournamentDetailPage = () => {
               <div className="flex items-center space-x-4 mt-3">
                 <span className="text-sm text-gray-400 flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{matches.length} matchs total</span>
+                  <span>{matches.length} matchs</span>
                 </span>
                 <span className="text-sm text-gray-400 flex items-center space-x-1">
                   <Users className="w-4 h-4" />
@@ -399,7 +402,7 @@ const TournamentDetailPage = () => {
               </section>
             )}
 
-            {/* Upcoming Matches (within 24h only) */}
+            {/* Upcoming Matches */}
             {upcomingMatches.length > 0 && (
               <section className="mb-8">
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
@@ -414,12 +417,13 @@ const TournamentDetailPage = () => {
                       team1_score: existingPred?.team1_score ?? '',
                       team2_score: existingPred?.team2_score ?? ''
                     };
+                    const within24h = isWithin24Hours(match.match_date);
 
                     return (
-                      <div key={match.id} className="card border-orange-500/30 bg-orange-500/5">
+                      <div key={match.id} className={`card ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''}`}>
                         <div className="flex justify-between items-center mb-3">
                           <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
-                          <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full flex items-center space-x-1 animate-pulse">
+                          <span className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${within24h ? 'bg-orange-500/20 text-orange-400 animate-pulse' : 'bg-blue-500/20 text-blue-400'}`}>
                             <Clock className="w-3 h-3" />
                             <span>{getTimeRemaining(match.match_date)}</span>
                           </span>
@@ -540,8 +544,7 @@ const TournamentDetailPage = () => {
             {upcomingMatches.length === 0 && liveMatches.length === 0 && completedMatches.length === 0 && (
               <div className="card text-center py-12">
                 <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucun match disponible</p>
-                <p className="text-gray-500 text-sm mt-2">Les matchs apparaissent 24h avant le coup d'envoi</p>
+                <p className="text-gray-400">Aucun match programmé</p>
               </div>
             )}
           </>
