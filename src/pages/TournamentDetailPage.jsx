@@ -21,9 +21,7 @@ const TournamentDetailPage = () => {
   const [activeTab, setActiveTab] = useState('matches');
 
   useEffect(() => {
-    if (id) {
-      fetchData();
-    }
+    if (id) fetchData();
   }, [id, user]);
 
   const fetchData = async () => {
@@ -31,66 +29,59 @@ const TournamentDetailPage = () => {
     setError(null);
     
     try {
-      // Fetch tournament info first
-      console.log('Fetching tournament with id:', id);
+      // Fetch tournament info
       const tourRes = await tournamentsAPI.getById(id);
-      console.log('Tournament response:', tourRes.data);
-      
       if (!tourRes.data) {
         setError('Tournoi non trouvé');
         setLoading(false);
         return;
       }
-      
       setTournament(tourRes.data);
       
-      // Fetch ALL visible matches and filter by tournament on frontend
-      // Use getVisible() which is PUBLIC (no auth required)
+      // Fetch matches for this tournament
       try {
-        const matchesRes = await matchesAPI.getVisible();
-        console.log('All matches response:', matchesRes.data);
-        const allMatches = matchesRes.data || [];
-        // Filter matches for this tournament
-        const tournamentMatches = allMatches.filter(m => m.tournament_id === parseInt(id));
-        console.log('Filtered tournament matches:', tournamentMatches);
-        setMatches(tournamentMatches);
-      } catch (matchErr) {
-        console.error('Error fetching matches:', matchErr);
-        setMatches([]);
+        const matchesRes = await matchesAPI.getByTournament(id);
+        setMatches(matchesRes.data || []);
+      } catch (err) {
+        console.error('Error fetching matches:', err);
+        // Fallback: get all visible matches and filter
+        try {
+          const allMatches = await matchesAPI.getVisible();
+          const filtered = (allMatches.data || []).filter(m => m.tournament_id === parseInt(id));
+          setMatches(filtered);
+        } catch (e) {
+          setMatches([]);
+        }
       }
       
       // Fetch teams for this tournament
       try {
         const teamsRes = await tournamentsAPI.getTeams(id);
-        console.log('Teams response:', teamsRes.data);
+        console.log('Tournament teams:', teamsRes.data);
         setTournamentTeams(teamsRes.data || []);
-      } catch (teamErr) {
-        console.error('Error fetching teams:', teamErr);
+      } catch (err) {
+        console.error('Error fetching teams:', err);
         setTournamentTeams([]);
       }
 
-      // Fetch predictions if logged in
+      // Fetch user predictions if logged in
       if (user) {
         try {
           const predRes = await predictionsAPI.getMyPredictions();
           const predMap = {};
           (predRes.data || []).forEach(p => { predMap[p.match_id] = p; });
           setPredictions(predMap);
-        } catch (e) {
-          console.error('Error fetching predictions:', e);
-        }
+        } catch (e) {}
 
         try {
           const winnerRes = await tournamentWinnerAPI.get(id);
           setWinnerPrediction(winnerRes.data);
           if (winnerRes.data) setSelectedWinner(winnerRes.data.team_id.toString());
-        } catch (e) {
-          // No winner prediction yet
-        }
+        } catch (e) {}
       }
     } catch (err) {
-      console.error('Error fetching tournament:', err);
-      setError('Erreur lors du chargement du tournoi');
+      console.error('Error:', err);
+      setError('Erreur lors du chargement');
     } finally {
       setLoading(false);
     }
@@ -104,15 +95,11 @@ const TournamentDetailPage = () => {
     return <span className="text-xl">{flagUrl}</span>;
   };
 
-  // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
-    const now = new Date();
-    const matchDate = new Date(match.match_date);
-    return now < matchDate;
+    return new Date() < new Date(match.match_date);
   };
 
-  // Check if match is within 24 hours (for display purposes)
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
@@ -124,8 +111,7 @@ const TournamentDetailPage = () => {
   const canPredictWinner = () => {
     if (!matches.length) return true;
     const sortedMatches = [...matches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-    const firstMatch = sortedMatches[0];
-    return new Date() < new Date(firstMatch.match_date);
+    return new Date() < new Date(sortedMatches[0]?.match_date);
   };
 
   const getTimeRemaining = (matchDate) => {
@@ -202,11 +188,11 @@ const TournamentDetailPage = () => {
   }, {});
 
   // Filter matches by status
-  const completedMatches = matches.filter(m => m.status === 'completed');
   const liveMatches = matches.filter(m => m.status === 'live');
   const upcomingMatches = matches
     .filter(m => m.status === 'upcoming')
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+  const completedMatches = matches.filter(m => m.status === 'completed');
 
   if (loading) {
     return (
@@ -263,6 +249,12 @@ const TournamentDetailPage = () => {
                   <Users className="w-4 h-4" />
                   <span>{tournamentTeams.length} équipes</span>
                 </span>
+                {liveMatches.length > 0 && (
+                  <span className="text-sm text-red-400 flex items-center space-x-1 animate-pulse">
+                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                    <span>{liveMatches.length} en cours</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -312,7 +304,7 @@ const TournamentDetailPage = () => {
               activeTab === 'matches' ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'
             }`}
           >
-            Matchs
+            Matchs {liveMatches.length > 0 && <span className="ml-1 text-red-400">🔴</span>}
           </button>
           <button
             onClick={() => setActiveTab('teams')}
@@ -320,19 +312,37 @@ const TournamentDetailPage = () => {
               activeTab === 'teams' ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'
             }`}
           >
-            Équipes
+            Équipes ({tournamentTeams.length})
           </button>
         </div>
 
         {/* Teams Tab */}
         {activeTab === 'teams' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {Object.keys(groupedTeams).length === 0 ? (
+            {tournamentTeams.length === 0 ? (
               <div className="card text-center py-12">
                 <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucune équipe assignée</p>
+                <p className="text-gray-400">Aucune équipe assignée à ce tournoi</p>
+              </div>
+            ) : Object.keys(groupedTeams).length === 1 && groupedTeams['Sans groupe'] ? (
+              // No groups, just list teams
+              <div className="card">
+                <h3 className="text-lg font-bold text-white mb-4">Équipes participantes</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {tournamentTeams.map((team) => (
+                    <Link 
+                      to={`/equipe/${team.team_id}`} 
+                      key={team.team_id} 
+                      className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      {renderFlag(team.flag_url, team.name)}
+                      <span className="text-white font-medium text-sm truncate">{team.name}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             ) : (
+              // Groups view
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Object.entries(groupedTeams).sort().map(([groupName, teams]) => (
                   <motion.div
@@ -355,7 +365,7 @@ const TournamentDetailPage = () => {
                             {index + 1}
                           </span>
                           {renderFlag(team.flag_url, team.name)}
-                          <span className="text-white font-medium text-sm flex-1 truncate hover:text-primary-400">{team.name}</span>
+                          <span className="text-white font-medium text-sm flex-1 truncate">{team.name}</span>
                         </Link>
                       ))}
                     </div>
@@ -377,27 +387,33 @@ const TournamentDetailPage = () => {
                   <span>En cours</span>
                 </h2>
                 <div className="space-y-4">
-                  {liveMatches.map(match => (
-                    <div key={match.id} className="card border-red-500/50">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
-                        <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
+                  {liveMatches.map(match => {
+                    const pred = predictions[match.id];
+                    return (
+                      <div key={match.id} className="card border-red-500/50 bg-red-500/5">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
+                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 flex flex-col items-center">
+                            {renderFlag(match.team1_flag, match.team1_name)}
+                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
+                          </div>
+                          <div className="flex-1 flex flex-col items-center">
+                            <div className="text-3xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
+                          </div>
+                          <div className="flex-1 flex flex-col items-center">
+                            {renderFlag(match.team2_flag, match.team2_name)}
+                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
+                          </div>
+                        </div>
+                        {pred && (
+                          <p className="text-center text-xs text-gray-400 mt-3">Votre prono: {pred.team1_score} - {pred.team2_score}</p>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 flex flex-col items-center">
-                          {renderFlag(match.team1_flag, match.team1_name)}
-                          <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
-                        </div>
-                        <div className="flex-1 flex flex-col items-center">
-                          <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
-                        </div>
-                        <div className="flex-1 flex flex-col items-center">
-                          {renderFlag(match.team2_flag, match.team2_name)}
-                          <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -474,15 +490,13 @@ const TournamentDetailPage = () => {
 
                         {canPredict && user && (
                           <div className="mt-4 flex justify-center">
-                            <button onClick={() => submitPrediction(match.id)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <button onClick={() => submitPrediction(match.id)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium">
                               {existingPred ? 'Modifier' : 'Valider'}
                             </button>
                           </div>
                         )}
 
-                        {existingPred && (
-                          <p className="text-center text-xs text-green-400 mt-2">✓ Votre prono: {existingPred.team1_score} - {existingPred.team2_score}</p>
-                        )}
+                        {existingPred && <p className="text-center text-xs text-green-400 mt-2">✓ Votre prono: {existingPred.team1_score} - {existingPred.team2_score}</p>}
 
                         {!user && canPredict && (
                           <p className="text-center text-xs text-yellow-400 mt-4">
@@ -541,7 +555,7 @@ const TournamentDetailPage = () => {
               </section>
             )}
 
-            {upcomingMatches.length === 0 && liveMatches.length === 0 && completedMatches.length === 0 && (
+            {liveMatches.length === 0 && upcomingMatches.length === 0 && completedMatches.length === 0 && (
               <div className="card text-center py-12">
                 <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                 <p className="text-gray-400">Aucun match programmé</p>
