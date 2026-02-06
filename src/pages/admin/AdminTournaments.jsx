@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Plus, Edit, Trash2, Users, Save, X, Award, Crown } from 'lucide-react';
+import { Trophy, Plus, Edit, Trash2, Users, Save, X, Crown } from 'lucide-react';
 import { tournamentsAPI, teamsAPI, adminAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -85,14 +85,6 @@ const AdminTournaments = () => {
   const getFormatLabel = (format) => {
     const f = formats.find(f => f.value === format);
     return f ? f.label : format;
-  };
-
-  const renderFlag = (flagUrl, name) => {
-    if (!flagUrl) return <span className="text-lg">🏳️</span>;
-    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
-      return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
-    }
-    return <span className="text-lg">{flagUrl}</span>;
   };
 
   if (loading) {
@@ -420,25 +412,8 @@ const WinnerModal = ({ tournament, teams, onClose }) => {
                 </div>
               </div>
 
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
-                <div className="flex items-start space-x-3">
-                  <Award className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-yellow-400 text-sm font-medium">Attribution des points</p>
-                    <p className="text-yellow-400/70 text-xs mt-1">
-                      Les utilisateurs ayant pronostiqué cette équipe comme vainqueur recevront les points bonus définis dans les paramètres.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <div className="flex space-x-3">
-                <button
-                  onClick={onClose}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
+                <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
                 <button
                   onClick={handleAwardWinner}
                   disabled={!selectedWinner || awarding}
@@ -449,7 +424,7 @@ const WinnerModal = ({ tournament, teams, onClose }) => {
                   ) : (
                     <>
                       <Crown className="w-5 h-5" />
-                      <span>Déclarer vainqueur</span>
+                      <span>Déclarer</span>
                     </>
                   )}
                 </button>
@@ -462,7 +437,7 @@ const WinnerModal = ({ tournament, teams, onClose }) => {
   );
 };
 
-// Groups Management Modal
+// Groups Management Modal - FIXED
 const GroupsModal = ({ tournament, teams, formats, onClose }) => {
   const [tournamentTeams, setTournamentTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -479,48 +454,80 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
   const fetchTeams = async () => {
     try {
       const res = await adminAPI.getTournamentTeams(tournament.id);
-      setTournamentTeams(res.data);
+      // Ensure we have proper team_id values
+      const teamsWithIds = (res.data || []).map(t => ({
+        ...t,
+        team_id: t.team_id || t.id
+      }));
+      setTournamentTeams(teamsWithIds);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching teams:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleTeamGroupChange = (teamId, groupName) => {
-    const existing = tournamentTeams.find(t => t.team_id === teamId);
+    const numericTeamId = parseInt(teamId);
+    const existing = tournamentTeams.find(t => t.team_id === numericTeamId);
+    
     if (existing) {
       if (groupName === '') {
-        setTournamentTeams(tournamentTeams.filter(t => t.team_id !== teamId));
+        // Remove team from tournament
+        setTournamentTeams(tournamentTeams.filter(t => t.team_id !== numericTeamId));
       } else {
+        // Update team's group
         setTournamentTeams(tournamentTeams.map(t => 
-          t.team_id === teamId ? { ...t, group_name: groupName } : t
+          t.team_id === numericTeamId ? { ...t, group_name: groupName } : t
         ));
       }
     } else if (groupName) {
-      const team = teams.find(t => t.id === teamId);
-      setTournamentTeams([...tournamentTeams, { team_id: teamId, group_name: groupName, name: team.name, flag_url: team.flag_url }]);
+      // Add new team
+      const team = teams.find(t => t.id === numericTeamId);
+      if (team) {
+        setTournamentTeams([...tournamentTeams, { 
+          team_id: numericTeamId, 
+          group_name: groupName, 
+          name: team.name, 
+          flag_url: team.flag_url 
+        }]);
+      }
     }
   };
 
   const getTeamGroup = (teamId) => {
-    const found = tournamentTeams.find(t => t.team_id === teamId);
+    const found = tournamentTeams.find(t => t.team_id === parseInt(teamId));
     return found?.group_name || '';
   };
 
   const saveGroups = async () => {
     setSaving(true);
     try {
-      const teamsData = tournamentTeams.map(t => ({
-        teamId: t.team_id,
-        groupName: t.group_name,
-        position: 0
-      }));
-      await adminAPI.bulkAddTournamentTeams(tournament.id, { teams: teamsData });
-      toast.success('Groupes sauvegardés');
+      // Build the teams data array
+      const teamsData = tournamentTeams
+        .filter(t => t.team_id && t.group_name) // Only include valid entries
+        .map(t => ({
+          teamId: parseInt(t.team_id),
+          groupName: t.group_name,
+          position: 0
+        }));
+      
+      console.log('Saving teams:', teamsData);
+      
+      if (teamsData.length === 0) {
+        toast.error('Aucune équipe à sauvegarder');
+        setSaving(false);
+        return;
+      }
+      
+      const response = await adminAPI.bulkAddTournamentTeams(tournament.id, { teams: teamsData });
+      console.log('Save response:', response);
+      
+      toast.success(`${teamsData.length} équipes sauvegardées`);
       onClose();
     } catch (error) {
-      toast.error('Erreur');
+      console.error('Error saving groups:', error);
+      toast.error(error.response?.data?.error || 'Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
@@ -545,12 +552,20 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
         <div className="p-6 border-b border-white/10 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-white">Groupes - {tournament.name}</h2>
-            <p className="text-gray-400 text-sm">{format?.label}</p>
+            <p className="text-gray-400 text-sm">{format?.label} • {tournamentTeams.length} équipes sélectionnées</p>
           </div>
           <div className="flex items-center space-x-3">
-            <button onClick={saveGroups} disabled={saving} className="btn-primary flex items-center space-x-2">
-              <Save className="w-4 h-4" />
-              <span>Sauvegarder</span>
+            <button 
+              onClick={saveGroups} 
+              disabled={saving} 
+              className="btn-primary flex items-center space-x-2"
+            >
+              {saving ? (
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
             </button>
             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg">
               <X className="w-6 h-6 text-gray-400" />
@@ -571,7 +586,7 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
                   const groupTeams = tournamentTeams.filter(t => t.group_name === letter);
                   return (
                     <div key={letter} className="bg-white/5 rounded-xl p-4">
-                      <h3 className="font-bold text-white mb-3">Groupe {letter}</h3>
+                      <h3 className="font-bold text-white mb-3">Groupe {letter} ({groupTeams.length})</h3>
                       {groupTeams.length === 0 ? (
                         <p className="text-gray-500 text-sm">Aucune équipe</p>
                       ) : (
@@ -590,7 +605,7 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
               </div>
 
               {/* All Teams */}
-              <h3 className="font-bold text-white mb-4">Assigner les équipes</h3>
+              <h3 className="font-bold text-white mb-4">Assigner les équipes aux groupes</h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teams.map(team => (
                   <div key={team.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
