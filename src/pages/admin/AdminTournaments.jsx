@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Plus, Edit, Trash2, Users, Save, X } from 'lucide-react';
+import { Trophy, Plus, Edit, Trash2, Users, Save, X, Award, Crown } from 'lucide-react';
 import { tournamentsAPI, teamsAPI, adminAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -11,6 +11,7 @@ const AdminTournaments = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showGroupsModal, setShowGroupsModal] = useState(null);
+  const [showWinnerModal, setShowWinnerModal] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4'
@@ -84,6 +85,14 @@ const AdminTournaments = () => {
   const getFormatLabel = (format) => {
     const f = formats.find(f => f.value === format);
     return f ? f.label : format;
+  };
+
+  const renderFlag = (flagUrl, name) => {
+    if (!flagUrl) return <span className="text-lg">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
+      return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
+    }
+    return <span className="text-lg">{flagUrl}</span>;
   };
 
   if (loading) {
@@ -211,15 +220,15 @@ const AdminTournaments = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {tournament.logo_url ? (
-                    <img src={tournament.logo_url} alt={tournament.name} className="w-14 h-14 rounded-lg object-cover" />
+                    <img src={tournament.logo_url} alt={tournament.name} className="w-12 h-12 rounded-lg object-cover" />
                   ) : (
-                    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                      <Trophy className="w-7 h-7 text-white" />
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                      <Trophy className="w-6 h-6 text-white" />
                     </div>
                   )}
                   <div>
-                    <h3 className="text-white font-bold text-lg">{tournament.name}</h3>
-                    <div className="flex items-center space-x-3 text-sm text-gray-400">
+                    <h3 className="text-lg font-bold text-white">{tournament.name}</h3>
+                    <div className="flex items-center space-x-2 text-sm text-gray-400">
                       <span>{getFormatLabel(tournament.format)}</span>
                       <span>•</span>
                       <span>{tournament.match_count || 0} matchs</span>
@@ -232,6 +241,13 @@ const AdminTournaments = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowWinnerModal(tournament)}
+                    className="p-2 hover:bg-yellow-500/20 text-yellow-400 rounded-lg"
+                    title="Déclarer le vainqueur"
+                  >
+                    <Crown className="w-5 h-5" />
+                  </button>
                   <button
                     onClick={() => setShowGroupsModal(tournament)}
                     className="p-2 hover:bg-blue-500/20 text-blue-400 rounded-lg"
@@ -267,6 +283,181 @@ const AdminTournaments = () => {
           onClose={() => { setShowGroupsModal(null); fetchData(); }}
         />
       )}
+
+      {/* Winner Modal */}
+      {showWinnerModal && (
+        <WinnerModal
+          tournament={showWinnerModal}
+          teams={teams}
+          onClose={() => { setShowWinnerModal(null); fetchData(); }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Winner Declaration Modal
+const WinnerModal = ({ tournament, teams, onClose }) => {
+  const [tournamentTeams, setTournamentTeams] = useState([]);
+  const [selectedWinner, setSelectedWinner] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [awarding, setAwarding] = useState(false);
+
+  useEffect(() => {
+    fetchTeams();
+  }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const res = await adminAPI.getTournamentTeams(tournament.id);
+      setTournamentTeams(res.data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAwardWinner = async () => {
+    if (!selectedWinner) {
+      toast.error('Sélectionnez une équipe');
+      return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir déclarer ce vainqueur ? Les points bonus seront attribués aux utilisateurs ayant fait le bon pronostic.')) {
+      return;
+    }
+
+    setAwarding(true);
+    try {
+      const res = await adminAPI.awardTournamentWinner({
+        tournament_id: tournament.id,
+        team_id: parseInt(selectedWinner)
+      });
+      toast.success(res.data.message || 'Vainqueur déclaré !');
+      onClose();
+    } catch (error) {
+      toast.error('Erreur lors de l\'attribution des points');
+    } finally {
+      setAwarding(false);
+    }
+  };
+
+  const renderFlag = (flagUrl, name) => {
+    if (!flagUrl) return <span className="text-2xl">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
+      return <img src={flagUrl} alt={name} className="w-8 h-6 object-cover rounded" />;
+    }
+    return <span className="text-2xl">{flagUrl}</span>;
+  };
+
+  // Use tournament teams if available, otherwise all teams
+  const availableTeams = tournamentTeams.length > 0 
+    ? tournamentTeams.map(tt => ({
+        id: tt.team_id,
+        name: tt.name,
+        flag_url: tt.flag_url
+      }))
+    : teams;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-gray-800 rounded-2xl max-w-md w-full"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-yellow-500/20 rounded-lg">
+              <Crown className="w-6 h-6 text-yellow-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Déclarer le vainqueur</h2>
+              <p className="text-gray-400 text-sm">{tournament.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg">
+            <X className="w-6 h-6 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <label className="block text-sm text-gray-400 mb-3">Sélectionnez l'équipe gagnante</label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {availableTeams.map(team => (
+                    <label
+                      key={team.id}
+                      className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedWinner === team.id.toString()
+                          ? 'bg-yellow-500/20 border border-yellow-500/50'
+                          : 'bg-white/5 hover:bg-white/10 border border-transparent'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="winner"
+                        value={team.id}
+                        checked={selectedWinner === team.id.toString()}
+                        onChange={(e) => setSelectedWinner(e.target.value)}
+                        className="sr-only"
+                      />
+                      {renderFlag(team.flag_url, team.name)}
+                      <span className="text-white font-medium flex-1">{team.name}</span>
+                      {selectedWinner === team.id.toString() && (
+                        <Trophy className="w-5 h-5 text-yellow-400" />
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                <div className="flex items-start space-x-3">
+                  <Award className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-yellow-400 text-sm font-medium">Attribution des points</p>
+                    <p className="text-yellow-400/70 text-xs mt-1">
+                      Les utilisateurs ayant pronostiqué cette équipe comme vainqueur recevront les points bonus définis dans les paramètres.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={onClose}
+                  className="btn-secondary flex-1"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAwardWinner}
+                  disabled={!selectedWinner || awarding}
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {awarding ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full" />
+                  ) : (
+                    <>
+                      <Crown className="w-5 h-5" />
+                      <span>Déclarer vainqueur</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
