@@ -7,6 +7,7 @@ import { tournamentsAPI, matchesAPI, leaderboardAPI, settingsAPI } from '../api'
 const HomePage = () => {
   const [tournaments, setTournaments] = useState([]);
   const [matches, setMatches] = useState([]);
+  const [liveMatches, setLiveMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [settings, setSettings] = useState({ site_logo: '', site_name: 'Prediction' });
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,6 @@ const HomePage = () => {
 
   const fetchData = async () => {
     try {
-      // Use getVisible() which is PUBLIC (no auth required)
       const [tourRes, matchRes, leadRes, settingsRes] = await Promise.all([
         tournamentsAPI.getActive().catch(() => ({ data: [] })),
         matchesAPI.getVisible().catch(() => ({ data: [] })),
@@ -25,16 +25,18 @@ const HomePage = () => {
         settingsAPI.get().catch(() => ({ data: {} }))
       ]);
       
-      console.log('Home - Fetched matches:', matchRes.data);
-      
       setTournaments(tourRes.data?.slice(0, 2) || []);
       
-      // Filter upcoming matches
       const allMatches = matchRes.data || [];
-      const upcomingMatches = allMatches
+      
+      // Separate live and upcoming
+      const live = allMatches.filter(m => m.status === 'live');
+      const upcoming = allMatches
         .filter(m => m.status === 'upcoming')
         .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-      setMatches(upcomingMatches.slice(0, 4));
+      
+      setLiveMatches(live);
+      setMatches(upcoming.slice(0, 4));
       
       setLeaderboard(leadRes.data?.slice(0, 5) || []);
       setSettings({ ...settings, ...settingsRes.data });
@@ -129,9 +131,55 @@ const HomePage = () => {
       <div className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
 
+          {/* Live Matches */}
+          {liveMatches.length > 0 && (
+            <motion.section 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.35 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white flex items-center space-x-2">
+                  <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                  <span>En direct</span>
+                </h2>
+                <Link to="/matchs" className="text-primary-400 hover:text-primary-300 text-sm flex items-center">
+                  Voir tout <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {liveMatches.slice(0, 2).map((match) => (
+                  <div key={match.id} className="card border-red-500/50 bg-red-500/5">
+                    <div className="flex items-center justify-between mb-2">
+                      {match.tournament_name && (
+                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{match.tournament_name}</span>
+                      )}
+                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Link to={`/equipe/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
+                        {renderFlag(match.team1_flag, match.team1_name)}
+                        <span className="text-white text-sm truncate">{match.team1_name}</span>
+                      </Link>
+                      <div className="px-4 text-center">
+                        <div className="text-2xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
+                      </div>
+                      <Link to={`/equipe/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
+                        <span className="text-white text-sm truncate">{match.team2_name}</span>
+                        {renderFlag(match.team2_flag, match.team2_name)}
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
           <div className="grid lg:grid-cols-3 gap-8">
             
-            {/* Matches */}
+            {/* Upcoming Matches */}
             <motion.section 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -153,7 +201,7 @@ const HomePage = () => {
                   <div className="text-center py-8 text-gray-400">
                     <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>Aucun match à venir</p>
-                    <p className="text-sm text-gray-500 mt-1">Les matchs apparaissent 24h avant le coup d'envoi</p>
+                    <p className="text-sm text-gray-500 mt-1">Les matchs apparaissent 24h avant</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-white/10">
@@ -162,14 +210,14 @@ const HomePage = () => {
                         <div className="flex items-center justify-between">
                           <Link to={`/equipe/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
                             {renderFlag(match.team1_flag, match.team1_name)}
-                            <span className="text-white text-sm truncate hover:text-primary-400">{match.team1_name}</span>
+                            <span className="text-white text-sm truncate">{match.team1_name}</span>
                           </Link>
                           <div className="px-3 text-center shrink-0">
                             <div className="text-xs text-gray-500">{formatDate(match.match_date)}</div>
                             <div className="text-orange-400 font-semibold">VS</div>
                           </div>
                           <Link to={`/equipe/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
-                            <span className="text-white text-sm truncate hover:text-primary-400">{match.team2_name}</span>
+                            <span className="text-white text-sm truncate">{match.team2_name}</span>
                             {renderFlag(match.team2_flag, match.team2_name)}
                           </Link>
                         </div>
