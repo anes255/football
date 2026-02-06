@@ -229,37 +229,56 @@ const TournamentDetailPage = () => {
         </motion.div>
 
         {/* Winner Prediction */}
-        {user && tournamentTeams.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card mb-6">
+        {tournamentTeams.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card mb-6 border-yellow-500/30 bg-yellow-500/5">
             <div className="flex items-center space-x-2 mb-4">
-              <Crown className="w-5 h-5 text-yellow-500" />
-              <h2 className="text-lg font-bold text-white">Prédire le vainqueur</h2>
+              <Crown className="w-6 h-6 text-yellow-500" />
+              <h2 className="text-lg font-bold text-white">Prédire le vainqueur du tournoi</h2>
             </div>
             
-            {canPredictWinner() ? (
-              <div className="flex items-center space-x-4">
-                <select
-                  value={selectedWinner}
-                  onChange={(e) => setSelectedWinner(e.target.value)}
-                  className="flex-1 bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
-                >
-                  <option value="">Sélectionner une équipe</option>
-                  {tournamentTeams.map(team => (
-                    <option key={team.team_id} value={team.team_id}>{team.name}</option>
-                  ))}
-                </select>
-                <button onClick={submitWinnerPrediction} className="btn-primary">
-                  {winnerPrediction ? 'Modifier' : 'Valider'}
-                </button>
-              </div>
+            {user ? (
+              canPredictWinner() ? (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                  <select
+                    value={selectedWinner}
+                    onChange={(e) => setSelectedWinner(e.target.value)}
+                    className="flex-1 bg-gray-700 border border-yellow-500/50 rounded-xl py-3 px-4 text-white"
+                  >
+                    <option value="">Sélectionner une équipe</option>
+                    {tournamentTeams.map(team => (
+                      <option key={team.team_id} value={team.team_id}>{team.name}</option>
+                    ))}
+                  </select>
+                  <button 
+                    onClick={submitWinnerPrediction} 
+                    className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Crown className="w-5 h-5" />
+                    <span>{winnerPrediction ? 'Modifier' : 'Valider'}</span>
+                  </button>
+                </div>
+              ) : (
+                <p className="text-gray-400">Les prédictions de vainqueur sont fermées (le tournoi a commencé)</p>
+              )
             ) : (
-              <p className="text-gray-400">Les prédictions de vainqueur sont fermées</p>
+              <p className="text-yellow-400 flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5" />
+                <span>Connectez-vous pour prédire le vainqueur et gagner des points bonus !</span>
+              </p>
             )}
             
             {winnerPrediction && (
-              <p className="text-green-400 text-sm mt-3">
-                ✓ Votre prédiction: {tournamentTeams.find(t => t.team_id === winnerPrediction.team_id)?.name}
-              </p>
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                <p className="text-green-400 flex items-center space-x-2">
+                  <Check className="w-5 h-5" />
+                  <span>
+                    Votre prédiction: <strong>{tournamentTeams.find(t => t.team_id === winnerPrediction.team_id)?.name}</strong>
+                    {winnerPrediction.points_earned > 0 && (
+                      <span className="ml-2 text-yellow-400">(+{winnerPrediction.points_earned} pts gagnés !)</span>
+                    )}
+                  </span>
+                </p>
+              </div>
             )}
           </motion.div>
         )}
