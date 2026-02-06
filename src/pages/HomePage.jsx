@@ -6,8 +6,8 @@ import { tournamentsAPI, matchesAPI, leaderboardAPI, settingsAPI } from '../api'
 
 const HomePage = () => {
   const [tournaments, setTournaments] = useState([]);
-  const [matches, setMatches] = useState([]);
   const [liveMatches, setLiveMatches] = useState([]);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [settings, setSettings] = useState({ site_logo: '', site_name: 'Prediction' });
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const HomePage = () => {
     try {
       const [tourRes, matchRes, leadRes, settingsRes] = await Promise.all([
         tournamentsAPI.getActive().catch(() => ({ data: [] })),
-        matchesAPI.getVisible().catch(() => ({ data: [] })),
+        matchesAPI.getVisible().catch(() => ({ data: [] })),  // Backend already filters to 24h
         leaderboardAPI.getAll().catch(() => ({ data: [] })),
         settingsAPI.get().catch(() => ({ data: {} }))
       ]);
@@ -29,14 +29,14 @@ const HomePage = () => {
       
       const allMatches = matchRes.data || [];
       
-      // Separate live and upcoming
+      // Separate live and upcoming (backend already filtered to 24h for upcoming)
       const live = allMatches.filter(m => m.status === 'live');
       const upcoming = allMatches
         .filter(m => m.status === 'upcoming')
         .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
       
       setLiveMatches(live);
-      setMatches(upcoming.slice(0, 4));
+      setUpcomingMatches(upcoming.slice(0, 4));
       
       setLeaderboard(leadRes.data?.slice(0, 5) || []);
       setSettings({ ...settings, ...settingsRes.data });
@@ -197,7 +197,7 @@ const HomePage = () => {
               </div>
 
               <div className="card">
-                {matches.length === 0 ? (
+                {upcomingMatches.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>Aucun match à venir</p>
@@ -205,7 +205,7 @@ const HomePage = () => {
                   </div>
                 ) : (
                   <div className="divide-y divide-white/10">
-                    {matches.map((match) => (
+                    {upcomingMatches.map((match) => (
                       <div key={match.id} className="py-4 first:pt-0 last:pb-0">
                         <div className="flex items-center justify-between">
                           <Link to={`/equipe/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
