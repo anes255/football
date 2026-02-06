@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Calendar, Award, ArrowRight, Users } from 'lucide-react';
+import { Trophy, Calendar, Award, ArrowRight } from 'lucide-react';
 import { tournamentsAPI, matchesAPI, leaderboardAPI, settingsAPI } from '../api';
 
 const HomePage = () => {
@@ -15,32 +15,26 @@ const HomePage = () => {
     fetchData();
   }, []);
 
-  // Check if match is within 24 hours
-  const isWithin24Hours = (matchDate) => {
-    const now = new Date();
-    const match = new Date(matchDate);
-    const diffMs = match.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffMs > 0 && diffHours <= 24;
-  };
-
   const fetchData = async () => {
     try {
+      // Use getVisible() which is PUBLIC (no auth required)
       const [tourRes, matchRes, leadRes, settingsRes] = await Promise.all([
         tournamentsAPI.getActive().catch(() => ({ data: [] })),
-        matchesAPI.getAll().catch(() => ({ data: [] })),
+        matchesAPI.getVisible().catch(() => ({ data: [] })),
         leaderboardAPI.getAll().catch(() => ({ data: [] })),
         settingsAPI.get().catch(() => ({ data: {} }))
       ]);
       
+      console.log('Home - Fetched matches:', matchRes.data);
+      
       setTournaments(tourRes.data?.slice(0, 2) || []);
       
-      // Only show upcoming matches within 24h
+      // Filter upcoming matches
       const allMatches = matchRes.data || [];
-      const upcomingWithin24h = allMatches
-        .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+      const upcomingMatches = allMatches
+        .filter(m => m.status === 'upcoming')
         .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-      setMatches(upcomingWithin24h.slice(0, 4));
+      setMatches(upcomingMatches.slice(0, 4));
       
       setLeaderboard(leadRes.data?.slice(0, 5) || []);
       setSettings({ ...settings, ...settingsRes.data });
@@ -158,7 +152,7 @@ const HomePage = () => {
                 {matches.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Aucun match dans les 24h</p>
+                    <p>Aucun match à venir</p>
                     <p className="text-sm text-gray-500 mt-1">Les matchs apparaissent 24h avant le coup d'envoi</p>
                   </div>
                 ) : (
