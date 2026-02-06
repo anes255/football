@@ -22,17 +22,14 @@ const MatchesPage = () => {
 
   const fetchData = async () => {
     try {
-      // Use getVisible() which is PUBLIC (no auth required)
       const [matchesRes, tourRes] = await Promise.all([
         matchesAPI.getVisible(),
         tournamentsAPI.getAll()
       ]);
       
-      console.log('Fetched visible matches:', matchesRes.data);
       setMatches(matchesRes.data || []);
       setTournaments(tourRes.data || []);
 
-      // Only fetch predictions if logged in
       if (user) {
         try {
           const predRes = await predictionsAPI.getMyPredictions();
@@ -58,15 +55,11 @@ const MatchesPage = () => {
     return <span className="text-3xl">{flagUrl}</span>;
   };
 
-  // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
-    const now = new Date();
-    const matchDate = new Date(match.match_date);
-    return now < matchDate;
+    return new Date() < new Date(match.match_date);
   };
 
-  // Check if match is within 24 hours
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
@@ -145,6 +138,45 @@ const MatchesPage = () => {
     );
   }
 
+  const LiveMatchCard = ({ match }) => {
+    const pred = predictions[match.id];
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card border-red-500/50 bg-red-500/5">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center space-x-2">
+            {match.tournament_name && (
+              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{match.tournament_name}</span>
+            )}
+            {match.stage && (
+              <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">{match.stage}</span>
+            )}
+          </div>
+          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+            {renderFlag(match.team1_flag, match.team1_name)}
+            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team1_name}</p>
+          </Link>
+          <div className="flex-1 flex flex-col items-center">
+            <div className="text-3xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
+          </div>
+          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+            {renderFlag(match.team2_flag, match.team2_name)}
+            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team2_name}</p>
+          </Link>
+        </div>
+
+        {pred && (
+          <p className="text-center text-xs text-gray-400 mt-3">
+            Votre prono: {pred.team1_score} - {pred.team2_score}
+          </p>
+        )}
+      </motion.div>
+    );
+  };
+
   const UpcomingMatchCard = ({ match }) => {
     const canPredict = canPredictMatch(match);
     const existingPred = predictions[match.id];
@@ -155,23 +187,14 @@ const MatchesPage = () => {
     const within24h = isWithin24Hours(match.match_date);
 
     return (
-      <motion.div 
-        key={match.id} 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        className={`card ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''}`}
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`card ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''}`}>
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center space-x-2">
             {match.tournament_name && (
-              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
-                {match.tournament_name}
-              </span>
+              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{match.tournament_name}</span>
             )}
             {match.stage && (
-              <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">
-                {match.stage}
-              </span>
+              <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">{match.stage}</span>
             )}
           </div>
           <span className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${within24h ? 'bg-orange-500/20 text-orange-400 animate-pulse' : 'bg-blue-500/20 text-blue-400'}`}>
@@ -181,13 +204,11 @@ const MatchesPage = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          {/* Team 1 - Centered flag above name */}
-          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80 transition-opacity">
+          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team1_flag, match.team1_name)}
-            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400 transition-colors">{match.team1_name}</p>
+            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team1_name}</p>
           </Link>
 
-          {/* Score/Prediction */}
           <div className="flex-1 flex flex-col items-center">
             {canPredict && user ? (
               <div className="flex items-center space-x-2">
@@ -219,19 +240,15 @@ const MatchesPage = () => {
             </p>
           </div>
 
-          {/* Team 2 - Centered flag above name */}
-          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80 transition-opacity">
+          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team2_flag, match.team2_name)}
-            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400 transition-colors">{match.team2_name}</p>
+            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team2_name}</p>
           </Link>
         </div>
 
         {canPredict && user && (
           <div className="mt-4 flex justify-center">
-            <button 
-              onClick={() => submitPrediction(match.id)} 
-              className="bg-orange-500 hover:bg-orange-600 text-white text-sm flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-colors"
-            >
+            <button onClick={() => submitPrediction(match.id)} className="bg-orange-500 hover:bg-orange-600 text-white text-sm flex items-center space-x-2 px-6 py-2 rounded-lg font-medium">
               <Check className="w-4 h-4" />
               <span>{existingPred ? 'Modifier' : 'Valider'}</span>
             </button>
@@ -250,53 +267,41 @@ const MatchesPage = () => {
     );
   };
 
-  const MatchCard = ({ match, prediction, completed }) => {
+  const CompletedMatchCard = ({ match }) => {
+    const pred = predictions[match.id];
     return (
-      <div className={`card ${completed ? 'opacity-80' : 'border-red-500/50'}`}>
+      <div className="card opacity-80">
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center space-x-2">
             {match.tournament_name && (
-              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
-                {match.tournament_name}
-              </span>
+              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{match.tournament_name}</span>
             )}
             {match.stage && (
-              <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">
-                {match.stage}
-              </span>
+              <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">{match.stage}</span>
             )}
           </div>
-          <span className={`text-xs px-2 py-1 rounded-full ml-auto ${
-            completed ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400 animate-pulse'
-          }`}>
-            {completed ? 'Terminé' : '🔴 En cours'}
-          </span>
+          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Terminé</span>
         </div>
 
         <div className="flex items-center justify-between">
-          {/* Team 1 - Centered */}
-          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80 transition-opacity">
+          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team1_flag, match.team1_name)}
-            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400 transition-colors">{match.team1_name}</p>
+            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team1_name}</p>
           </Link>
-          
-          {/* Score */}
           <div className="flex-1 flex flex-col items-center">
             <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
             <p className="text-xs text-gray-500 mt-1">{new Date(match.match_date).toLocaleDateString('fr-FR')}</p>
           </div>
-          
-          {/* Team 2 - Centered */}
-          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80 transition-opacity">
+          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team2_flag, match.team2_name)}
-            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400 transition-colors">{match.team2_name}</p>
+            <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team2_name}</p>
           </Link>
         </div>
 
-        {prediction && (
+        {pred && (
           <p className="text-center text-xs text-gray-400 mt-3">
-            Votre prono: {prediction.team1_score} - {prediction.team2_score}
-            {prediction.points_earned > 0 && <span className="text-green-400"> (+{prediction.points_earned} pts)</span>}
+            Votre prono: {pred.team1_score} - {pred.team2_score}
+            {pred.points_earned > 0 && <span className="text-green-400"> (+{pred.points_earned} pts)</span>}
           </p>
         )}
       </div>
@@ -329,8 +334,8 @@ const MatchesPage = () => {
             className="bg-gray-700 border border-gray-600 rounded-xl py-2 px-4 text-white"
           >
             <option value="all">Tous les matchs</option>
-            <option value="upcoming">À venir</option>
             <option value="live">En cours</option>
+            <option value="upcoming">À venir</option>
             <option value="completed">Terminés</option>
           </select>
         </div>
@@ -344,7 +349,7 @@ const MatchesPage = () => {
             </h2>
             <div className="space-y-4">
               {liveMatches.map(match => (
-                <MatchCard key={match.id} match={match} prediction={predictions[match.id]} />
+                <LiveMatchCard key={match.id} match={match} />
               ))}
             </div>
           </section>
@@ -374,13 +379,13 @@ const MatchesPage = () => {
             </h2>
             <div className="space-y-4">
               {completedMatches.map(match => (
-                <MatchCard key={match.id} match={match} prediction={predictions[match.id]} completed />
+                <CompletedMatchCard key={match.id} match={match} />
               ))}
             </div>
           </section>
         )}
 
-        {upcomingMatches.length === 0 && liveMatches.length === 0 && completedMatches.length === 0 && (
+        {liveMatches.length === 0 && upcomingMatches.length === 0 && completedMatches.length === 0 && (
           <div className="card text-center py-12">
             <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">Aucun match disponible</p>
