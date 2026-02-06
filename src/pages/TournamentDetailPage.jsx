@@ -17,25 +17,54 @@ const TournamentDetailPage = () => {
   const [winnerPrediction, setWinnerPrediction] = useState(null);
   const [selectedWinner, setSelectedWinner] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('matches');
 
   useEffect(() => {
-    fetchData();
+    if (id) {
+      fetchData();
+    }
   }, [id, user]);
 
   const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      // Use getByTournament to get ALL matches, then filter on frontend
-      const [tourRes, matchesRes, teamsRes] = await Promise.all([
-        tournamentsAPI.getById(id),
-        matchesAPI.getByTournament(id),  // Changed from getByTournamentVisible
-        tournamentsAPI.getTeams(id)
-      ]);
+      // Fetch tournament info first
+      console.log('Fetching tournament with id:', id);
+      const tourRes = await tournamentsAPI.getById(id);
+      console.log('Tournament response:', tourRes.data);
+      
+      if (!tourRes.data) {
+        setError('Tournoi non trouvé');
+        setLoading(false);
+        return;
+      }
       
       setTournament(tourRes.data);
-      setMatches(matchesRes.data || []);
-      setTournamentTeams(teamsRes.data || []);
+      
+      // Fetch matches for this tournament
+      try {
+        const matchesRes = await matchesAPI.getByTournament(id);
+        console.log('Matches response:', matchesRes.data);
+        setMatches(matchesRes.data || []);
+      } catch (matchErr) {
+        console.error('Error fetching matches:', matchErr);
+        setMatches([]);
+      }
+      
+      // Fetch teams for this tournament
+      try {
+        const teamsRes = await tournamentsAPI.getTeams(id);
+        console.log('Teams response:', teamsRes.data);
+        setTournamentTeams(teamsRes.data || []);
+      } catch (teamErr) {
+        console.error('Error fetching teams:', teamErr);
+        setTournamentTeams([]);
+      }
 
+      // Fetch predictions if logged in
       if (user) {
         try {
           const predRes = await predictionsAPI.getMyPredictions();
@@ -50,10 +79,13 @@ const TournamentDetailPage = () => {
           const winnerRes = await tournamentWinnerAPI.get(id);
           setWinnerPrediction(winnerRes.data);
           if (winnerRes.data) setSelectedWinner(winnerRes.data.team_id.toString());
-        } catch (e) {}
+        } catch (e) {
+          // No winner prediction yet
+        }
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      console.error('Error fetching tournament:', err);
+      setError('Erreur lors du chargement du tournoi');
     } finally {
       setLoading(false);
     }
@@ -70,15 +102,18 @@ const TournamentDetailPage = () => {
   // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
-    return new Date() < new Date(match.match_date);
+    const now = new Date();
+    const matchDate = new Date(match.match_date);
+    return now < matchDate;
   };
 
-  // Check if match is within 24 hours (for visibility to users)
+  // Check if match is within 24 hours (visible to users)
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
-    const diff = match - now;
-    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+    const diffMs = match.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffMs > 0 && diffHours <= 24;
   };
 
   const canPredictWinner = () => {
@@ -89,11 +124,15 @@ const TournamentDetailPage = () => {
   };
 
   const getTimeRemaining = (matchDate) => {
-    const diff = new Date(matchDate) - new Date();
-    if (diff <= 0) return null;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours > 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diffMs = match.getTime() - now.getTime();
+    if (diffMs <= 0) return null;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours >= 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
@@ -174,7 +213,7 @@ const TournamentDetailPage = () => {
     );
   }
 
-  if (!tournament) {
+  if (error || !tournament) {
     return (
       <div className="min-h-screen pt-20 px-4">
         <div className="max-w-4xl mx-auto">
@@ -184,7 +223,7 @@ const TournamentDetailPage = () => {
           </Link>
           <div className="card text-center py-12">
             <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Tournoi non trouvé</p>
+            <p className="text-gray-400">{error || 'Tournoi non trouvé'}</p>
           </div>
         </div>
       </div>
@@ -215,7 +254,7 @@ const TournamentDetailPage = () => {
               <div className="flex items-center space-x-4 mt-3">
                 <span className="text-sm text-gray-400 flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{matches.length} matchs</span>
+                  <span>{matches.length} matchs total</span>
                 </span>
                 <span className="text-sm text-gray-400 flex items-center space-x-1">
                   <Users className="w-4 h-4" />
@@ -227,7 +266,7 @@ const TournamentDetailPage = () => {
         </motion.div>
 
         {/* Winner Prediction */}
-        {user && (
+        {user && tournamentTeams.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card mb-6">
             <div className="flex items-center space-x-2 mb-4">
               <Crown className="w-5 h-5 text-yellow-500" />
@@ -366,7 +405,6 @@ const TournamentDetailPage = () => {
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
                   <Calendar className="w-5 h-5 text-orange-400" />
                   <span>À venir</span>
-                  <span className="text-sm font-normal text-orange-400">(dans les 24h)</span>
                 </h2>
                 <div className="space-y-4">
                   {upcomingMatches.map(match => {
