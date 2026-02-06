@@ -28,9 +28,10 @@ const TeamPage = () => {
       const teamRes = await teamsAPI.getById(id);
       setTeam(teamRes.data);
       
-      // Fetch all matches and filter for this team
+      // Fetch all visible matches and filter for this team
+      // Use getVisible() which is PUBLIC (no auth required)
       try {
-        const matchesRes = await matchesAPI.getAll();
+        const matchesRes = await matchesAPI.getVisible();
         const allMatches = matchesRes.data || [];
         // Filter matches that include this team
         const teamMatches = allMatches.filter(m => 
@@ -138,10 +139,8 @@ const TeamPage = () => {
   // Calculate stats from completed matches
   const completedMatches = matches.filter(m => m.status === 'completed');
   const liveMatches = matches.filter(m => m.status === 'live');
-  
-  // Only show upcoming matches within 24h
   const upcomingMatches = matches
-    .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+    .filter(m => m.status === 'upcoming')
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
 
   const stats = { played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
@@ -366,17 +365,16 @@ const TeamPage = () => {
           </section>
         )}
 
-        {/* Matches Within 24 Hours - Special Highlight */}
+        {/* Upcoming matches */}
         {upcomingMatches.length > 0 && (
           <section className="mb-8">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
               <span className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
               <span>À venir</span>
-              <span className="text-sm font-normal text-orange-400">Pronostiquez maintenant !</span>
             </h2>
             <div className="space-y-4">
               {upcomingMatches.map(match => (
-                <MatchCard key={match.id} match={match} highlight />
+                <MatchCard key={match.id} match={match} highlight={isWithin24Hours(match.match_date)} />
               ))}
             </div>
           </section>
