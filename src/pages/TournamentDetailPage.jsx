@@ -11,6 +11,7 @@ const TournamentDetailPage = () => {
   const { user } = useAuth();
   const [tournament, setTournament] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [allTournamentMatches, setAllTournamentMatches] = useState([]);
   const [tournamentTeams, setTournamentTeams] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [predictionInputs, setPredictionInputs] = useState({});
@@ -36,22 +37,50 @@ const TournamentDetailPage = () => {
       }
       setTournament(tourRes.data);
       
-      // Fetch matches - backend already filters to only show visible matches (24h rule)
+      // Fetch matches - backend filters to only show visible matches (24h rule)
+      let matchesData = [];
       try {
         const matchesRes = await matchesAPI.getByTournament(id);
-        setMatches(matchesRes.data || []);
+        matchesData = matchesRes.data || [];
+        setMatches(matchesData);
+        setAllTournamentMatches(matchesData);
       } catch (err) {
         console.error('Error fetching matches:', err);
         setMatches([]);
       }
       
       // Fetch teams for winner prediction dropdown
+      let teamsData = [];
       try {
         const teamsRes = await tournamentsAPI.getTeams(id);
-        setTournamentTeams(teamsRes.data || []);
+        teamsData = teamsRes.data || [];
       } catch (err) {
-        setTournamentTeams([]);
+        console.error('Error fetching tournament teams:', err);
       }
+
+      // If no teams in tournament_teams table, extract from matches
+      if (teamsData.length === 0 && matchesData.length > 0) {
+        const teamsMap = new Map();
+        matchesData.forEach(match => {
+          if (match.team1_id && !teamsMap.has(match.team1_id)) {
+            teamsMap.set(match.team1_id, {
+              team_id: match.team1_id,
+              name: match.team1_name,
+              flag_url: match.team1_flag
+            });
+          }
+          if (match.team2_id && !teamsMap.has(match.team2_id)) {
+            teamsMap.set(match.team2_id, {
+              team_id: match.team2_id,
+              name: match.team2_name,
+              flag_url: match.team2_flag
+            });
+          }
+        });
+        teamsData = Array.from(teamsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+      }
+      
+      setTournamentTeams(teamsData);
 
       // Fetch user predictions
       if (user) {
@@ -90,9 +119,14 @@ const TournamentDetailPage = () => {
   };
 
   const canPredictWinner = () => {
-    if (!matches.length) return true;
-    const sortedMatches = [...matches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-    return new Date() < new Date(sortedMatches[0]?.match_date);
+    // Check if any match in the tournament has started
+    if (!allTournamentMatches.length && !matches.length) return true;
+    const allMatches = allTournamentMatches.length > 0 ? allTournamentMatches : matches;
+    const sortedMatches = [...allMatches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    const firstMatch = sortedMatches[0];
+    if (!firstMatch) return true;
+    // Can predict if first match hasn't started yet
+    return new Date() < new Date(firstMatch.match_date);
   };
 
   const getTimeRemaining = (matchDate) => {
@@ -228,7 +262,7 @@ const TournamentDetailPage = () => {
           </div>
         </motion.div>
 
-        {/* Winner Prediction */}
+        {/* Winner Prediction - Always show if there are teams */}
         {tournamentTeams.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card mb-6 border-yellow-500/30 bg-yellow-500/5">
             <div className="flex items-center space-x-2 mb-4">
@@ -238,47 +272,63 @@ const TournamentDetailPage = () => {
             
             {user ? (
               canPredictWinner() ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                  <select
-                    value={selectedWinner}
-                    onChange={(e) => setSelectedWinner(e.target.value)}
-                    className="flex-1 bg-gray-700 border border-yellow-500/50 rounded-xl py-3 px-4 text-white"
-                  >
-                    <option value="">Sélectionner une équipe</option>
-                    {tournamentTeams.map(team => (
-                      <option key={team.team_id} value={team.team_id}>{team.name}</option>
-                    ))}
-                  </select>
-                  <button 
-                    onClick={submitWinnerPrediction} 
-                    className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center space-x-2"
-                  >
-                    <Crown className="w-5 h-5" />
-                    <span>{winnerPrediction ? 'Modifier' : 'Valider'}</span>
-                  </button>
-                </div>
+                <>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    <select
+                      value={selectedWinner}
+                      onChange={(e) => setSelectedWinner(e.target.value)}
+                      className="flex-1 bg-gray-700 border border-yellow-500/50 rounded-xl py-3 px-4 text-white"
+                    >
+                      <option value="">Sélectionner une équipe</option>
+                      {tournamentTeams.map(team => (
+                        <option key={team.team_id} value={team.team_id}>{team.name}</option>
+                      ))}
+                    </select>
+                    <button 
+                      onClick={submitWinnerPrediction} 
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <Crown className="w-5 h-5" />
+                      <span>{winnerPrediction ? 'Modifier' : 'Valider'}</span>
+                    </button>
+                  </div>
+                  {winnerPrediction && (
+                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                      <p className="text-green-400 flex items-center space-x-2">
+                        <Check className="w-5 h-5" />
+                        <span>
+                          Votre prédiction: <strong>{tournamentTeams.find(t => t.team_id === winnerPrediction.team_id)?.name}</strong>
+                          {winnerPrediction.points_earned > 0 && (
+                            <span className="ml-2 text-yellow-400">(+{winnerPrediction.points_earned} pts gagnés !)</span>
+                          )}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
-                <p className="text-gray-400">Les prédictions de vainqueur sont fermées (le tournoi a commencé)</p>
+                <>
+                  <p className="text-gray-400">Les prédictions de vainqueur sont fermées (le tournoi a commencé)</p>
+                  {winnerPrediction && (
+                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                      <p className="text-green-400 flex items-center space-x-2">
+                        <Check className="w-5 h-5" />
+                        <span>
+                          Votre prédiction: <strong>{tournamentTeams.find(t => t.team_id === winnerPrediction.team_id)?.name}</strong>
+                          {winnerPrediction.points_earned > 0 && (
+                            <span className="ml-2 text-yellow-400">(+{winnerPrediction.points_earned} pts gagnés !)</span>
+                          )}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </>
               )
             ) : (
               <p className="text-yellow-400 flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5" />
                 <span>Connectez-vous pour prédire le vainqueur et gagner des points bonus !</span>
               </p>
-            )}
-            
-            {winnerPrediction && (
-              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-                <p className="text-green-400 flex items-center space-x-2">
-                  <Check className="w-5 h-5" />
-                  <span>
-                    Votre prédiction: <strong>{tournamentTeams.find(t => t.team_id === winnerPrediction.team_id)?.name}</strong>
-                    {winnerPrediction.points_earned > 0 && (
-                      <span className="ml-2 text-yellow-400">(+{winnerPrediction.points_earned} pts gagnés !)</span>
-                    )}
-                  </span>
-                </p>
-              </div>
             )}
           </motion.div>
         )}
