@@ -22,6 +22,7 @@ const MatchesPage = () => {
 
   const fetchData = async () => {
     try {
+      // Backend already filters: only returns completed, live, OR upcoming within 24h
       const [matchesRes, tourRes] = await Promise.all([
         matchesAPI.getVisible(),
         tournamentsAPI.getAll()
@@ -60,14 +61,6 @@ const MatchesPage = () => {
     return new Date() < new Date(match.match_date);
   };
 
-  const isWithin24Hours = (matchDate) => {
-    const now = new Date();
-    const match = new Date(matchDate);
-    const diffMs = match.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffMs > 0 && diffHours <= 24;
-  };
-
   const getTimeRemaining = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
@@ -77,7 +70,6 @@ const MatchesPage = () => {
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (hours >= 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
@@ -184,10 +176,9 @@ const MatchesPage = () => {
       team1_score: existingPred?.team1_score ?? '',
       team2_score: existingPred?.team2_score ?? ''
     };
-    const within24h = isWithin24Hours(match.match_date);
 
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`card ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''}`}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card border-orange-500/30 bg-orange-500/5">
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center space-x-2">
             {match.tournament_name && (
@@ -197,7 +188,7 @@ const MatchesPage = () => {
               <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">{match.stage}</span>
             )}
           </div>
-          <span className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${within24h ? 'bg-orange-500/20 text-orange-400 animate-pulse' : 'bg-blue-500/20 text-blue-400'}`}>
+          <span className="text-xs px-2 py-1 rounded-full flex items-center space-x-1 bg-orange-500/20 text-orange-400 animate-pulse">
             <Clock className="w-3 h-3" />
             <span>{getTimeRemaining(match.match_date)}</span>
           </span>
