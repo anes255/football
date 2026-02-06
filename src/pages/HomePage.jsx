@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Calendar, Award, ArrowRight, Users, Target } from 'lucide-react';
+import { Trophy, Calendar, Award, ArrowRight, Users } from 'lucide-react';
 import { tournamentsAPI, matchesAPI, leaderboardAPI, settingsAPI } from '../api';
 
 const HomePage = () => {
@@ -19,8 +19,9 @@ const HomePage = () => {
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
-    const diff = match - now;
-    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+    const diffMs = match.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffMs > 0 && diffHours <= 24;
   };
 
   const fetchData = async () => {
@@ -133,30 +134,6 @@ const HomePage = () => {
       {/* Content */}
       <div className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
-          
-          {/* Stats Bar */}
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-3 gap-4 mb-10"
-          >
-            <div className="card text-center py-4">
-              <Trophy className="w-6 h-6 text-yellow-500 mx-auto mb-1" />
-              <p className="text-xl font-bold text-white">{tournaments.length}</p>
-              <p className="text-xs text-gray-400">Tournois actifs</p>
-            </div>
-            <div className="card text-center py-4">
-              <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-1" />
-              <p className="text-xl font-bold text-white">{matches.length}</p>
-              <p className="text-xs text-gray-400">Matchs (24h)</p>
-            </div>
-            <div className="card text-center py-4">
-              <Users className="w-6 h-6 text-green-500 mx-auto mb-1" />
-              <p className="text-xl font-bold text-white">{leaderboard.length}</p>
-              <p className="text-xs text-gray-400">Joueurs</p>
-            </div>
-          </motion.div>
 
           <div className="grid lg:grid-cols-3 gap-8">
             
@@ -164,14 +141,13 @@ const HomePage = () => {
             <motion.section 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.4 }}
               className="lg:col-span-2"
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center space-x-2">
                   <span className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
                   <span>Matchs à venir</span>
-                  <span className="text-sm font-normal text-orange-400">(24h)</span>
                 </h2>
                 <Link to="/matchs" className="text-primary-400 hover:text-primary-300 text-sm flex items-center">
                   Voir tout <ArrowRight className="w-4 h-4 ml-1" />
@@ -214,7 +190,7 @@ const HomePage = () => {
             <motion.section
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.5 }}
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center space-x-2">
@@ -273,7 +249,7 @@ const HomePage = () => {
             <motion.section 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.6 }}
               className="mt-10"
             >
               <div className="flex items-center justify-between mb-4">
