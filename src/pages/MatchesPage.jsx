@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Check, AlertCircle, Trophy } from 'lucide-react';
+import { Calendar, Clock, Check, AlertCircle } from 'lucide-react';
 import { matchesAPI, predictionsAPI, tournamentsAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -22,13 +22,13 @@ const MatchesPage = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch matches and tournaments - visible to everyone
+      // Use getVisible() which is PUBLIC (no auth required)
       const [matchesRes, tourRes] = await Promise.all([
-        matchesAPI.getAll(),
+        matchesAPI.getVisible(),
         tournamentsAPI.getAll()
       ]);
       
-      console.log('Fetched matches:', matchesRes.data);
+      console.log('Fetched visible matches:', matchesRes.data);
       setMatches(matchesRes.data || []);
       setTournaments(tourRes.data || []);
 
@@ -66,13 +66,12 @@ const MatchesPage = () => {
     return now < matchDate;
   };
 
-  // Check if match is within 24 hours (visible to users)
+  // Check if match is within 24 hours
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
     const diffMs = match.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
-    // Show if match is in the future and within 24 hours
     return diffMs > 0 && diffHours <= 24;
   };
 
@@ -129,18 +128,14 @@ const MatchesPage = () => {
     filteredMatches = filteredMatches.filter(m => m.status === filterStatus);
   }
 
-  // Group by status - only show upcoming matches within 24h
+  // Group by status
   const liveMatches = filteredMatches.filter(m => m.status === 'live');
   const upcomingMatches = filteredMatches
-    .filter(m => m.status === 'upcoming' && isWithin24Hours(m.match_date))
+    .filter(m => m.status === 'upcoming')
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
   const completedMatches = filteredMatches
     .filter(m => m.status === 'completed')
     .sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
-
-  // Debug log
-  console.log('All upcoming matches:', filteredMatches.filter(m => m.status === 'upcoming'));
-  console.log('Filtered upcoming (24h):', upcomingMatches);
 
   if (loading) {
     return (
@@ -157,13 +152,14 @@ const MatchesPage = () => {
       team1_score: existingPred?.team1_score ?? '',
       team2_score: existingPred?.team2_score ?? ''
     };
+    const within24h = isWithin24Hours(match.match_date);
 
     return (
       <motion.div 
         key={match.id} 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
-        className="card border-orange-500/30 bg-orange-500/5"
+        className={`card ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''}`}
       >
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center space-x-2">
@@ -178,7 +174,7 @@ const MatchesPage = () => {
               </span>
             )}
           </div>
-          <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full flex items-center space-x-1 animate-pulse">
+          <span className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${within24h ? 'bg-orange-500/20 text-orange-400 animate-pulse' : 'bg-blue-500/20 text-blue-400'}`}>
             <Clock className="w-3 h-3" />
             <span>{getTimeRemaining(match.match_date)}</span>
           </span>
@@ -354,13 +350,12 @@ const MatchesPage = () => {
           </section>
         )}
 
-        {/* Upcoming Matches (within 24h) */}
+        {/* Upcoming Matches */}
         {upcomingMatches.length > 0 && (
           <section className="mb-8">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
               <span className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
               <span>À venir</span>
-              <span className="text-sm font-normal text-orange-400">Pronostiquez maintenant !</span>
             </h2>
             <div className="space-y-4">
               {upcomingMatches.map(match => (
