@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Trophy, Clock, Check, AlertCircle, Flag } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Check, AlertCircle, Flag } from 'lucide-react';
 import { teamsAPI, matchesAPI, predictionsAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -77,23 +77,30 @@ const TeamPage = () => {
   // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
-    return new Date() < new Date(match.match_date);
+    const now = new Date();
+    const matchDate = new Date(match.match_date);
+    return now < matchDate;
   };
 
   // Check if match is within 24 hours
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
-    const diff = match - now;
-    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+    const diffMs = match.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffMs > 0 && diffHours <= 24;
   };
 
   const getTimeRemaining = (matchDate) => {
-    const diff = new Date(matchDate) - new Date();
-    if (diff <= 0) return null;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours > 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diffMs = match.getTime() - now.getTime();
+    if (diffMs <= 0) return null;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours >= 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
