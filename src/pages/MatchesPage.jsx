@@ -22,13 +22,17 @@ const MatchesPage = () => {
 
   const fetchData = async () => {
     try {
+      // Fetch matches and tournaments - visible to everyone
       const [matchesRes, tourRes] = await Promise.all([
         matchesAPI.getAll(),
         tournamentsAPI.getAll()
       ]);
+      
+      console.log('Fetched matches:', matchesRes.data);
       setMatches(matchesRes.data || []);
       setTournaments(tourRes.data || []);
 
+      // Only fetch predictions if logged in
       if (user) {
         try {
           const predRes = await predictionsAPI.getMyPredictions();
@@ -40,7 +44,7 @@ const MatchesPage = () => {
         }
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -57,23 +61,31 @@ const MatchesPage = () => {
   // Can predict as long as match hasn't started
   const canPredictMatch = (match) => {
     if (match.status === 'completed' || match.status === 'live') return false;
-    return new Date() < new Date(match.match_date);
+    const now = new Date();
+    const matchDate = new Date(match.match_date);
+    return now < matchDate;
   };
 
-  // Check if match is within 24 hours
+  // Check if match is within 24 hours (visible to users)
   const isWithin24Hours = (matchDate) => {
     const now = new Date();
     const match = new Date(matchDate);
-    const diff = match - now;
-    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+    const diffMs = match.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    // Show if match is in the future and within 24 hours
+    return diffMs > 0 && diffHours <= 24;
   };
 
   const getTimeRemaining = (matchDate) => {
-    const diff = new Date(matchDate) - new Date();
-    if (diff <= 0) return null;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours > 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diffMs = match.getTime() - now.getTime();
+    if (diffMs <= 0) return null;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours >= 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
@@ -125,6 +137,10 @@ const MatchesPage = () => {
   const completedMatches = filteredMatches
     .filter(m => m.status === 'completed')
     .sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
+
+  // Debug log
+  console.log('All upcoming matches:', filteredMatches.filter(m => m.status === 'upcoming'));
+  console.log('Filtered upcoming (24h):', upcomingMatches);
 
   if (loading) {
     return (
