@@ -1,38 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Phone, Lock, User, UserPlus, Trophy, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { teamsAPI, validateAlgerianPhone } from '../api';
+import { validateAlgerianPhone } from '../api';
 import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const [teams, setTeams] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     password: '',
-    confirmPassword: '',
-    predicted_winner_id: ''
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [phoneError, setPhoneError] = useState('');
-
-  useEffect(() => {
-    fetchTeams();
-  }, []);
-
-  const fetchTeams = async () => {
-    try {
-      const res = await teamsAPI.getAll();
-      setTeams(res.data);
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-    }
-  };
 
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
@@ -73,8 +58,7 @@ const RegisterPage = () => {
       await register({
         name: formData.name,
         phone: formData.phone,
-        password: formData.password,
-        predicted_winner_id: formData.predicted_winner_id || null
+        password: formData.password
       });
       toast.success('Inscription réussie !');
       navigate('/');
@@ -181,23 +165,6 @@ const RegisterPage = () => {
                 />
               </div>
             </div>
-
-            {teams.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Équipe gagnante (optionnel)</label>
-                <select
-                  value={formData.predicted_winner_id}
-                  onChange={(e) => setFormData({ ...formData, predicted_winner_id: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
-                >
-                  <option value="">Sélectionnez une équipe</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Pronostiquez le vainqueur pour des points bonus !</p>
-              </div>
-            )}
 
             <button
               type="submit"
