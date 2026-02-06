@@ -18,7 +18,6 @@ const TournamentDetailPage = () => {
   const [selectedWinner, setSelectedWinner] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('matches');
 
   useEffect(() => {
     if (id) fetchData();
@@ -29,7 +28,6 @@ const TournamentDetailPage = () => {
     setError(null);
     
     try {
-      // Fetch tournament info
       const tourRes = await tournamentsAPI.getById(id);
       if (!tourRes.data) {
         setError('Tournoi non trouvé');
@@ -38,33 +36,24 @@ const TournamentDetailPage = () => {
       }
       setTournament(tourRes.data);
       
-      // Fetch matches for this tournament
+      // Fetch matches - backend already filters to only show visible matches (24h rule)
       try {
         const matchesRes = await matchesAPI.getByTournament(id);
         setMatches(matchesRes.data || []);
       } catch (err) {
         console.error('Error fetching matches:', err);
-        // Fallback: get all visible matches and filter
-        try {
-          const allMatches = await matchesAPI.getVisible();
-          const filtered = (allMatches.data || []).filter(m => m.tournament_id === parseInt(id));
-          setMatches(filtered);
-        } catch (e) {
-          setMatches([]);
-        }
+        setMatches([]);
       }
       
-      // Fetch teams for this tournament
+      // Fetch teams for winner prediction dropdown
       try {
         const teamsRes = await tournamentsAPI.getTeams(id);
-        console.log('Tournament teams:', teamsRes.data);
         setTournamentTeams(teamsRes.data || []);
       } catch (err) {
-        console.error('Error fetching teams:', err);
         setTournamentTeams([]);
       }
 
-      // Fetch user predictions if logged in
+      // Fetch user predictions
       if (user) {
         try {
           const predRes = await predictionsAPI.getMyPredictions();
@@ -100,14 +89,6 @@ const TournamentDetailPage = () => {
     return new Date() < new Date(match.match_date);
   };
 
-  const isWithin24Hours = (matchDate) => {
-    const now = new Date();
-    const match = new Date(matchDate);
-    const diffMs = match.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffMs > 0 && diffHours <= 24;
-  };
-
   const canPredictWinner = () => {
     if (!matches.length) return true;
     const sortedMatches = [...matches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
@@ -123,7 +104,6 @@ const TournamentDetailPage = () => {
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (hours >= 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
@@ -178,14 +158,6 @@ const TournamentDetailPage = () => {
       toast.error(err.response?.data?.error || 'Erreur');
     }
   };
-
-  // Group teams by group_name
-  const groupedTeams = tournamentTeams.reduce((acc, team) => {
-    const group = team.group_name || 'Sans groupe';
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(team);
-    return acc;
-  }, {});
 
   // Filter matches by status
   const liveMatches = matches.filter(m => m.status === 'live');
@@ -242,10 +214,6 @@ const TournamentDetailPage = () => {
               {tournament.description && <p className="text-gray-400 mt-1">{tournament.description}</p>}
               <div className="flex items-center space-x-4 mt-3">
                 <span className="text-sm text-gray-400 flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>{matches.length} matchs</span>
-                </span>
-                <span className="text-sm text-gray-400 flex items-center space-x-1">
                   <Users className="w-4 h-4" />
                   <span>{tournamentTeams.length} équipes</span>
                 </span>
@@ -296,272 +264,187 @@ const TournamentDetailPage = () => {
           </motion.div>
         )}
 
-        {/* Tabs */}
-        <div className="flex space-x-2 mb-6">
-          <button
-            onClick={() => setActiveTab('matches')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'matches' ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'
-            }`}
-          >
-            Matchs {liveMatches.length > 0 && <span className="ml-1 text-red-400">🔴</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('teams')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'teams' ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'
-            }`}
-          >
-            Équipes ({tournamentTeams.length})
-          </button>
-        </div>
-
-        {/* Teams Tab */}
-        {activeTab === 'teams' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {tournamentTeams.length === 0 ? (
-              <div className="card text-center py-12">
-                <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucune équipe assignée à ce tournoi</p>
-              </div>
-            ) : Object.keys(groupedTeams).length === 1 && groupedTeams['Sans groupe'] ? (
-              // No groups, just list teams
-              <div className="card">
-                <h3 className="text-lg font-bold text-white mb-4">Équipes participantes</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {tournamentTeams.map((team) => (
-                    <Link 
-                      to={`/equipe/${team.team_id}`} 
-                      key={team.team_id} 
-                      className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
-                    >
-                      {renderFlag(team.flag_url, team.name)}
-                      <span className="text-white font-medium text-sm truncate">{team.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              // Groups view
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(groupedTeams).sort().map(([groupName, teams]) => (
-                  <motion.div
-                    key={groupName}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="card"
-                  >
-                    <div className="bg-gradient-to-r from-primary-500 to-accent-500 -m-6 mb-4 p-4 rounded-t-2xl">
-                      <h3 className="text-lg font-bold text-white text-center">Groupe {groupName}</h3>
+        {/* Live Matches */}
+        {liveMatches.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+              <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+              <span>En cours</span>
+            </h2>
+            <div className="space-y-4">
+              {liveMatches.map(match => {
+                const pred = predictions[match.id];
+                return (
+                  <div key={match.id} className="card border-red-500/50 bg-red-500/5">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
+                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
                     </div>
-                    <div className="space-y-3">
-                      {teams.map((team, index) => (
-                        <Link 
-                          to={`/equipe/${team.team_id}`} 
-                          key={team.team_id} 
-                          className="flex items-center space-x-3 p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
-                        >
-                          <span className="w-6 h-6 flex items-center justify-center bg-white/10 rounded-full text-sm text-gray-400">
-                            {index + 1}
-                          </span>
-                          {renderFlag(team.flag_url, team.name)}
-                          <span className="text-white font-medium text-sm flex-1 truncate">{team.name}</span>
-                        </Link>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 flex flex-col items-center">
+                        {renderFlag(match.team1_flag, match.team1_name)}
+                        <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                        <div className="text-3xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                        {renderFlag(match.team2_flag, match.team2_name)}
+                        <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
+                      </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
+                    {pred && (
+                      <p className="text-center text-xs text-gray-400 mt-3">Votre prono: {pred.team1_score} - {pred.team2_score}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
-        {/* Matches Tab */}
-        {activeTab === 'matches' && (
-          <>
-            {/* Live Matches */}
-            {liveMatches.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-                  <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                  <span>En cours</span>
-                </h2>
-                <div className="space-y-4">
-                  {liveMatches.map(match => {
-                    const pred = predictions[match.id];
-                    return (
-                      <div key={match.id} className="card border-red-500/50 bg-red-500/5">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
-                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 flex flex-col items-center">
-                            {renderFlag(match.team1_flag, match.team1_name)}
-                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            <div className="text-3xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            {renderFlag(match.team2_flag, match.team2_name)}
-                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
-                          </div>
-                        </div>
-                        {pred && (
-                          <p className="text-center text-xs text-gray-400 mt-3">Votre prono: {pred.team1_score} - {pred.team2_score}</p>
-                        )}
+        {/* Upcoming Matches */}
+        {upcomingMatches.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-orange-400" />
+              <span>À venir</span>
+            </h2>
+            <div className="space-y-4">
+              {upcomingMatches.map(match => {
+                const canPredict = canPredictMatch(match);
+                const existingPred = predictions[match.id];
+                const input = predictionInputs[match.id] || {
+                  team1_score: existingPred?.team1_score ?? '',
+                  team2_score: existingPred?.team2_score ?? ''
+                };
+
+                return (
+                  <div key={match.id} className="card border-orange-500/30 bg-orange-500/5">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
+                      <span className="text-xs px-2 py-1 rounded-full flex items-center space-x-1 bg-orange-500/20 text-orange-400 animate-pulse">
+                        <Clock className="w-3 h-3" />
+                        <span>{getTimeRemaining(match.match_date)}</span>
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 flex flex-col items-center">
+                        {renderFlag(match.team1_flag, match.team1_name)}
+                        <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* Upcoming Matches */}
-            {upcomingMatches.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-orange-400" />
-                  <span>À venir</span>
-                </h2>
-                <div className="space-y-4">
-                  {upcomingMatches.map(match => {
-                    const canPredict = canPredictMatch(match);
-                    const existingPred = predictions[match.id];
-                    const input = predictionInputs[match.id] || {
-                      team1_score: existingPred?.team1_score ?? '',
-                      team2_score: existingPred?.team2_score ?? ''
-                    };
-                    const within24h = isWithin24Hours(match.match_date);
-
-                    return (
-                      <div key={match.id} className={`card ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''}`}>
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
-                          <span className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${within24h ? 'bg-orange-500/20 text-orange-400 animate-pulse' : 'bg-blue-500/20 text-blue-400'}`}>
-                            <Clock className="w-3 h-3" />
-                            <span>{getTimeRemaining(match.match_date)}</span>
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 flex flex-col items-center">
-                            {renderFlag(match.team1_flag, match.team1_name)}
-                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
+                      
+                      <div className="flex-1 flex flex-col items-center">
+                        {canPredict && user ? (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="20"
+                              value={input.team1_score}
+                              onChange={(e) => handlePredictionChange(match.id, 'team1_score', e.target.value)}
+                              className="w-12 bg-gray-700 border border-orange-500/50 rounded-lg py-2 text-white text-center"
+                            />
+                            <span className="text-gray-400">-</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="20"
+                              value={input.team2_score}
+                              onChange={(e) => handlePredictionChange(match.id, 'team2_score', e.target.value)}
+                              className="w-12 bg-gray-700 border border-orange-500/50 rounded-lg py-2 text-white text-center"
+                            />
                           </div>
-                          
-                          <div className="flex-1 flex flex-col items-center">
-                            {canPredict && user ? (
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="20"
-                                  value={input.team1_score}
-                                  onChange={(e) => handlePredictionChange(match.id, 'team1_score', e.target.value)}
-                                  className="w-12 bg-gray-700 border border-orange-500/50 rounded-lg py-2 text-white text-center"
-                                />
-                                <span className="text-gray-400">-</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="20"
-                                  value={input.team2_score}
-                                  onChange={(e) => handlePredictionChange(match.id, 'team2_score', e.target.value)}
-                                  className="w-12 bg-gray-700 border border-orange-500/50 rounded-lg py-2 text-white text-center"
-                                />
-                              </div>
-                            ) : existingPred ? (
-                              <span className="text-lg font-bold text-gray-400">{existingPred.team1_score} - {existingPred.team2_score}</span>
-                            ) : (
-                              <span className="text-gray-500">VS</span>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              {new Date(match.match_date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                          
-                          <div className="flex-1 flex flex-col items-center">
-                            {renderFlag(match.team2_flag, match.team2_name)}
-                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
-                          </div>
-                        </div>
-
-                        {canPredict && user && (
-                          <div className="mt-4 flex justify-center">
-                            <button onClick={() => submitPrediction(match.id)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium">
-                              {existingPred ? 'Modifier' : 'Valider'}
-                            </button>
-                          </div>
+                        ) : existingPred ? (
+                          <span className="text-lg font-bold text-gray-400">{existingPred.team1_score} - {existingPred.team2_score}</span>
+                        ) : (
+                          <span className="text-gray-500">VS</span>
                         )}
-
-                        {existingPred && <p className="text-center text-xs text-green-400 mt-2">✓ Votre prono: {existingPred.team1_score} - {existingPred.team2_score}</p>}
-
-                        {!user && canPredict && (
-                          <p className="text-center text-xs text-yellow-400 mt-4">
-                            <AlertCircle className="w-4 h-4 inline mr-1" />
-                            Connectez-vous pour pronostiquer
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          {new Date(match.match_date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* Completed */}
-            {completedMatches.length > 0 && (
-              <section>
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
-                  <Check className="w-5 h-5 text-green-400" />
-                  <span>Terminés</span>
-                </h2>
-                <div className="space-y-4">
-                  {completedMatches.map(match => {
-                    const pred = predictions[match.id];
-                    return (
-                      <div key={match.id} className="card opacity-80">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
-                          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Terminé</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 flex flex-col items-center">
-                            {renderFlag(match.team1_flag, match.team1_name)}
-                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            {renderFlag(match.team2_flag, match.team2_name)}
-                            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
-                          </div>
-                        </div>
-
-                        {pred && (
-                          <p className="text-center text-xs text-gray-400 mt-3">
-                            Votre prono: {pred.team1_score} - {pred.team2_score}
-                            {pred.points_earned > 0 && <span className="text-green-400"> (+{pred.points_earned} pts)</span>}
-                          </p>
-                        )}
+                      
+                      <div className="flex-1 flex flex-col items-center">
+                        {renderFlag(match.team2_flag, match.team2_name)}
+                        <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+                    </div>
 
-            {liveMatches.length === 0 && upcomingMatches.length === 0 && completedMatches.length === 0 && (
-              <div className="card text-center py-12">
-                <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucun match programmé</p>
-              </div>
-            )}
-          </>
+                    {canPredict && user && (
+                      <div className="mt-4 flex justify-center">
+                        <button onClick={() => submitPrediction(match.id)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-medium">
+                          {existingPred ? 'Modifier' : 'Valider'}
+                        </button>
+                      </div>
+                    )}
+
+                    {existingPred && <p className="text-center text-xs text-green-400 mt-2">✓ Votre prono: {existingPred.team1_score} - {existingPred.team2_score}</p>}
+
+                    {!user && canPredict && (
+                      <p className="text-center text-xs text-yellow-400 mt-4">
+                        <AlertCircle className="w-4 h-4 inline mr-1" />
+                        Connectez-vous pour pronostiquer
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Completed */}
+        {completedMatches.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+              <Check className="w-5 h-5 text-green-400" />
+              <span>Terminés</span>
+            </h2>
+            <div className="space-y-4">
+              {completedMatches.map(match => {
+                const pred = predictions[match.id];
+                return (
+                  <div key={match.id} className="card opacity-80">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-xs text-gray-400">{match.stage || 'Phase de groupes'}</span>
+                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Terminé</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 flex flex-col items-center">
+                        {renderFlag(match.team1_flag, match.team1_name)}
+                        <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                        <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                        {renderFlag(match.team2_flag, match.team2_name)}
+                        <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
+                      </div>
+                    </div>
+
+                    {pred && (
+                      <p className="text-center text-xs text-gray-400 mt-3">
+                        Votre prono: {pred.team1_score} - {pred.team2_score}
+                        {pred.points_earned > 0 && <span className="text-green-400"> (+{pred.points_earned} pts)</span>}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {liveMatches.length === 0 && upcomingMatches.length === 0 && completedMatches.length === 0 && (
+          <div className="card text-center py-12">
+            <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">Aucun match disponible</p>
+            <p className="text-gray-500 text-sm mt-2">Les matchs apparaissent 24h avant le coup d'envoi</p>
+          </div>
         )}
       </div>
     </div>
