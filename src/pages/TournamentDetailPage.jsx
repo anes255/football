@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, Calendar, MapPin, Clock, ChevronLeft, Crown, Check } from 'lucide-react';
 import { tournamentsAPI, matchesAPI, tournamentWinnerAPI } from '../api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const TournamentDetailPage = () => {
