@@ -1,10 +1,10 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { Trophy, User, Target, Check } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { tournamentsAPI } from '../api';
 
 const TournamentPredictions = ({ tournamentId }) => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [players, setPlayers] = useState([]);
   const [myPrediction, setMyPrediction] = useState(null);
   const [showModal, setShowModal] = useState(false);
