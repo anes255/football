@@ -1,14 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Home, Trophy, Calendar, Award, User, LogOut, Shield, Globe, Flag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://fotball-backend.onrender.com/api';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [siteName, setSiteName] = useState('Prediction World');
+  const [siteLogo, setSiteLogo] = useState('');
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/settings`);
+        if (res.data.site_name) setSiteName(res.data.site_name);
+        if (res.data.site_logo) setSiteLogo(res.data.site_logo);
+      } catch (e) {
+        console.error('Error fetching site settings:', e);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -32,12 +50,15 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-              <Globe className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center overflow-hidden">
+              {siteLogo ? (
+                <img src={siteLogo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Globe className="w-6 h-6 text-white" />
+              )}
             </div>
             <span className="font-display text-xl">
-              <span className="gradient-text">Prediction</span>
-              <span className="text-white">World</span>
+              <span className="gradient-text">{siteName}</span>
             </span>
           </Link>
 
