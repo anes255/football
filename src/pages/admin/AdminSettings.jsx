@@ -224,12 +224,11 @@ const AdminSettings = () => {
             <p className="text-sm text-gray-400 mb-3">Aperçu sur la page d'accueil:</p>
             <div className="flex items-center justify-center">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 mb-4">
-                  <img src={settings.site_logo} alt="Logo" className="w-16 h-16 object-contain" />
+                <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 mb-4 overflow-hidden">
+                  <img src={settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <h2 className="text-2xl font-bold">
-                  <span className="gradient-text">{settings.site_name || 'Prediction'}</span>
-                  <span className="text-white"> World</span>
+                  <span className="gradient-text">{settings.site_name || 'Prediction World'}</span>
                 </h2>
               </div>
             </div>
