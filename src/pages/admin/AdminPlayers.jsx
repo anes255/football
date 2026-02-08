@@ -191,7 +191,7 @@ const AdminPlayers = () => {
         <select
           value={selectedTournament}
           onChange={(e) => setSelectedTournament(e.target.value)}
-          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+          className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
         >
           <option value="">-- Choisir un tournoi --</option>
           {tournaments.map((t) => (
@@ -234,7 +234,7 @@ const AdminPlayers = () => {
                 placeholder="Rechercher un joueur..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
               />
             </div>
           )}
@@ -336,7 +336,7 @@ const AdminPlayers = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
                   placeholder="Ex: Cristiano Ronaldo"
                 />
               </div>
@@ -347,7 +347,7 @@ const AdminPlayers = () => {
                 <select
                   value={formData.team_id}
                   onChange={(e) => setFormData({ ...formData, team_id: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
                 >
                   <option value="">-- Choisir une équipe --</option>
                   {availableTeams.map((t) => (
@@ -365,7 +365,7 @@ const AdminPlayers = () => {
                   type="text"
                   value={formData.photo_url}
                   onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
                   placeholder="https://..."
                 />
               </div>
@@ -376,7 +376,7 @@ const AdminPlayers = () => {
                 <select
                   value={formData.position}
                   onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
                 >
                   <option value="">-- Choisir --</option>
                   <option value="Gardien">Gardien</option>
@@ -428,7 +428,7 @@ const AdminPlayers = () => {
                 <select
                   value={winners.best_player_id}
                   onChange={(e) => setWinners({ ...winners, best_player_id: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
                 >
                   <option value="">-- Sélectionner --</option>
                   {players.map((p) => (
@@ -448,7 +448,7 @@ const AdminPlayers = () => {
                 <select
                   value={winners.best_goal_scorer_id}
                   onChange={(e) => setWinners({ ...winners, best_goal_scorer_id: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-primary-500 focus:outline-none"
                 >
                   <option value="">-- Sélectionner --</option>
                   {players.map((p) => (
