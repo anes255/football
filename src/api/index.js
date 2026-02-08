@@ -52,6 +52,16 @@ export const tournamentsAPI = {
   create: (data) => api.post('/tournaments', data),
   update: (id, data) => api.put(`/tournaments/${id}`, data),
   delete: (id) => api.delete(`/tournaments/${id}`),
+  // Players
+  getPlayers: (tournamentId) => api.get(`/tournaments/${tournamentId}/players`),
+  createPlayer: (tournamentId, data) => api.post(`/tournaments/${tournamentId}/players`, data),
+  updatePlayer: (playerId, data) => api.put(`/players/${playerId}`, data),
+  deletePlayer: (playerId) => api.delete(`/players/${playerId}`),
+  // Player predictions
+  getMyPrediction: (tournamentId) => api.get(`/tournaments/${tournamentId}/my-player-prediction`),
+  savePrediction: (tournamentId, data) => api.post(`/tournaments/${tournamentId}/player-prediction`, data),
+  // Admin: set winners
+  setWinners: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/set-player-winners`, data),
 };
 
 export const matchesAPI = {
@@ -66,7 +76,6 @@ export const matchesAPI = {
   create: (data) => api.post('/matches', data),
   update: (id, data) => api.put(`/matches/${id}`, data),
   delete: (id) => api.delete(`/matches/${id}`),
-  // Match control endpoints
   startMatch: (id) => api.put(`/matches/${id}/start`),
   updateScore: (id, data) => api.put(`/matches/${id}/score`, data),
   completeMatch: (id, data) => api.put(`/matches/${id}/complete`, data),
