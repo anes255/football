@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Trophy, Target, Check, XCircle } from 'lucide-react';
+import { X, Trophy, Target, Check, XCircle, User } from 'lucide-react';
 import { predictionsAPI } from '../api';
 
 const UserPredictionsModal = ({ userId, userName, onClose }) => {
@@ -87,6 +87,46 @@ const UserPredictionsModal = ({ userId, userName, onClose }) => {
                 </div>
               )}
 
+              {/* Player Predictions (Best Player / Best Goal Scorer) */}
+              {data?.playerPredictions?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-white mb-3 flex items-center space-x-2">
+                    <User className="w-5 h-5 text-cyan-500" />
+                    <span>Prédictions Joueurs</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {data.playerPredictions.map((pp, i) => (
+                      <div key={i} className="p-3 bg-white/5 rounded-xl">
+                        <p className="text-xs text-gray-400 mb-2">{pp.tournament_name}</p>
+                        <div className="space-y-2">
+                          {pp.best_player_name && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Trophy className="w-4 h-4 text-yellow-400" />
+                                <span className="text-white text-sm">Meilleur joueur: <span className="font-semibold">{pp.best_player_name}</span></span>
+                                {pp.best_player_team && <span className="text-xs text-gray-400">({pp.best_player_team})</span>}
+                              </div>
+                            </div>
+                          )}
+                          {pp.best_goal_scorer_name && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Target className="w-4 h-4 text-red-400" />
+                                <span className="text-white text-sm">Meilleur buteur: <span className="font-semibold">{pp.best_goal_scorer_name}</span></span>
+                                {pp.best_goal_scorer_team && <span className="text-xs text-gray-400">({pp.best_goal_scorer_team})</span>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {pp.points_earned > 0 && (
+                          <p className="text-green-400 font-bold text-sm mt-2">+{pp.points_earned} pts</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Match Predictions */}
               <h3 className="text-lg font-bold text-white mb-3 flex items-center space-x-2">
                 <Target className="w-5 h-5 text-blue-500" />
@@ -116,28 +156,22 @@ const UserPredictionsModal = ({ userId, userName, onClose }) => {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        {/* Team 1 */}
                         <div className="flex-1 flex items-center space-x-2">
                           {renderFlag(pred.team1_flag, pred.team1_name)}
                           <span className="text-white text-sm truncate">{pred.team1_name}</span>
                         </div>
-
-                        {/* Scores */}
                         <div className="flex-1 text-center">
                           <div className="text-xs text-gray-400 mb-1">Prono</div>
                           <div className="text-white font-bold">{pred.team1_score} - {pred.team2_score}</div>
                           <div className="text-xs text-gray-400 mt-1">Réel</div>
                           <div className="text-gray-300 text-sm">{pred.actual_team1_score} - {pred.actual_team2_score}</div>
                         </div>
-
-                        {/* Team 2 */}
                         <div className="flex-1 flex items-center justify-end space-x-2">
                           <span className="text-white text-sm truncate">{pred.team2_name}</span>
                           {renderFlag(pred.team2_flag, pred.team2_name)}
                         </div>
                       </div>
 
-                      {/* Result indicator */}
                       <div className="mt-2 flex justify-center">
                         {pred.points_earned >= 5 ? (
                           <span className="text-xs text-green-400 flex items-center space-x-1">
