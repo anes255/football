@@ -62,12 +62,10 @@ const TournamentDetailPage = () => {
 
       // Check if tournament has started
       try {
-        const startedRes = await fetch(`${import.meta.env.VITE_API_URL || 'https://fotball-backend.onrender.com'}/api/tournaments/${id}/started`);
-        const startedData = await startedRes.json();
-        setTournamentStarted(startedData.started);
+        const startedRes = await tournamentsAPI.getStarted(id);
+        setTournamentStarted(startedRes.data.started);
       } catch (e) {
         console.error('Error checking tournament started:', e);
-        // On error, default to false (allow predictions)
         setTournamentStarted(false);
       }
 
