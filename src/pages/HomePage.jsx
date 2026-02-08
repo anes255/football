@@ -81,12 +81,12 @@ const HomePage = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-6"
+            className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-6 overflow-hidden"
           >
             {settings.site_logo ? (
-              <img src={settings.site_logo} alt="Logo" className="w-16 h-16 object-contain" />
+              <img src={settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              <Trophy className="w-10 h-10 text-white" />
+              <Trophy className="w-12 h-12 text-white" />
             )}
           </motion.div>
 
@@ -96,8 +96,7 @@ const HomePage = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold mb-4"
           >
-            <span className="gradient-text">{settings.site_name || 'Prediction'}</span>
-            <span className="text-white"> World</span>
+            <span className="gradient-text">{settings.site_name || 'Prediction World'}</span>
           </motion.h1>
 
           <motion.p
