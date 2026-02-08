@@ -1,11 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, Flag, Settings, Award, ArrowLeft, Globe } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Flag, Settings, Award, ArrowLeft, Globe, User } from 'lucide-react';
 
 const AdminSidebar = () => {
   const location = useLocation();
   const menuItems = [
     { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+    { path: '/admin/tournois', label: 'Tournois', icon: Globe },
     { path: '/admin/equipes', label: 'Équipes', icon: Flag },
+    { path: '/admin/joueurs', label: 'Joueurs', icon: User },
     { path: '/admin/matchs', label: 'Matchs', icon: Calendar },
     { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: Users },
     { path: '/admin/scoring', label: 'Scoring', icon: Award },
