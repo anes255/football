@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { Trophy, User, Target, Check } from 'lucide-react';
-import { AuthContext } from '../../context/AuthContext';
-import { tournamentsAPI } from '../../api';
+import { AuthContext } from '../context/AuthContext';
+import { tournamentsAPI } from '../api';
 
 const TournamentPredictions = ({ tournamentId }) => {
   const { user } = useContext(AuthContext);
