@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Calendar, Clock, Check, AlertCircle, Users, Crown } from 'lucide-react';
+import { ArrowLeft, Trophy, Calendar, Clock, Check, AlertCircle, Users, Crown, User, Target } from 'lucide-react';
 import { tournamentsAPI, matchesAPI, predictionsAPI, tournamentWinnerAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import TournamentPredictions from '../components/TournamentPredictions';
@@ -19,7 +19,8 @@ const TournamentDetailPage = () => {
   const [selectedWinner, setSelectedWinner] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('matches');
-  const [tournamentStarted, setTournamentStarted] = useState(true);
+  // FIX: Default to false so users can predict until we confirm it has started
+  const [tournamentStarted, setTournamentStarted] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -59,13 +60,15 @@ const TournamentDetailPage = () => {
       }
       setTournamentTeams(teamsData);
 
+      // Check if tournament has started
       try {
         const startedRes = await fetch(`${import.meta.env.VITE_API_URL || 'https://fotball-backend.onrender.com'}/api/tournaments/${id}/started`);
         const startedData = await startedRes.json();
         setTournamentStarted(startedData.started);
       } catch (e) {
         console.error('Error checking tournament started:', e);
-        setTournamentStarted(true);
+        // On error, default to false (allow predictions)
+        setTournamentStarted(false);
       }
 
       if (user) {
@@ -206,17 +209,17 @@ const TournamentDetailPage = () => {
                 </div>
               </div>
 
-              <div className="flex space-x-4 border-b border-white/10">
+              <div className="flex space-x-4 border-b border-white/10 overflow-x-auto">
                 <button
                   onClick={() => setActiveTab('matches')}
-                  className={`pb-3 px-2 transition-colors ${activeTab === 'matches' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'matches' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                 >
                   Matchs
                 </button>
                 {tournamentTeams.length > 0 && (
                   <button
                     onClick={() => setActiveTab('teams')}
-                    className={`pb-3 px-2 transition-colors ${activeTab === 'teams' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                    className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'teams' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                   >
                     Équipes
                   </button>
@@ -224,17 +227,30 @@ const TournamentDetailPage = () => {
                 {user && (
                   <button
                     onClick={() => setActiveTab('winner')}
-                    className={`pb-3 px-2 transition-colors ${activeTab === 'winner' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                    className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'winner' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                   >
                     Vainqueur
+                  </button>
+                )}
+                {user && (
+                  <button
+                    onClick={() => setActiveTab('players')}
+                    className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'players' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    <span className="flex items-center space-x-1">
+                      <User className="w-4 h-4" />
+                      <span>Joueurs</span>
+                    </span>
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Tournament Predictions - Best Player & Goal Scorer */}
-          {user && <TournamentPredictions tournamentId={id} />}
+          {/* Players Tab - Best Player & Goal Scorer Predictions */}
+          {activeTab === 'players' && user && (
+            <TournamentPredictions tournamentId={id} tournamentStarted={tournamentStarted} />
+          )}
 
           {activeTab === 'teams' && (
             <div className="space-y-6">
