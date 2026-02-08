@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Palette, Trophy, Save, Image, Upload, X } from 'lucide-react';
+import { Settings, Palette, Trophy, Save, Image, Upload, X, Globe } from 'lucide-react';
 import { adminAPI, teamsAPI, tournamentsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -182,7 +182,7 @@ const AdminSettings = () => {
 
           {/* Logo Upload */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Logo du site (affiché sur la page d'accueil)</label>
+            <label className="block text-sm text-gray-400 mb-2">Logo du site (affiché dans l'en-tête et la page d'accueil)</label>
             <div className="flex items-center space-x-4">
               {settings.site_logo ? (
                 <div className="relative">
@@ -214,26 +214,26 @@ const AdminSettings = () => {
                 />
               </label>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Format: PNG, JPG. Max 1MB. Ce logo remplacera l'icône par défaut sur la page d'accueil.</p>
+            <p className="text-xs text-gray-500 mt-2">Format: PNG, JPG. Max 1MB. Ce logo sera affiché dans l'en-tête du site et sur la page d'accueil.</p>
           </div>
         </div>
 
         {/* Preview */}
-        {settings.site_logo && (
-          <div className="mt-6 p-4 bg-white/5 rounded-xl">
-            <p className="text-sm text-gray-400 mb-3">Aperçu sur la page d'accueil:</p>
-            <div className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 mb-4 overflow-hidden">
-                  <img src={settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
-                </div>
-                <h2 className="text-2xl font-bold">
-                  <span className="gradient-text">{settings.site_name || 'Prediction World'}</span>
-                </h2>
-              </div>
+        <div className="mt-6 p-4 bg-white/5 rounded-xl">
+          <p className="text-sm text-gray-400 mb-3">Aperçu de l'en-tête:</p>
+          <div className="flex items-center space-x-2 p-3 bg-gray-900/80 rounded-xl border border-white/10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center overflow-hidden">
+              {settings.site_logo ? (
+                <img src={settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Globe className="w-6 h-6 text-white" />
+              )}
             </div>
+            <span className="font-bold text-xl">
+              <span className="gradient-text">{settings.site_name || 'Prediction World'}</span>
+            </span>
           </div>
-        )}
+        </div>
       </motion.div>
 
       {/* Scoring Rules */}
