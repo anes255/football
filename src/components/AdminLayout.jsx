@@ -1,5 +1,5 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Trophy, Users, Calendar, Settings, Flag, Home, LayoutDashboard, Award } from 'lucide-react';
+import { Trophy, Users, Calendar, Settings, Flag, Home, LayoutDashboard, Award, User } from 'lucide-react';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -8,6 +8,7 @@ const AdminLayout = () => {
     { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { path: '/admin/tournois', label: 'Tournois', icon: Trophy },
     { path: '/admin/equipes', label: 'Équipes', icon: Flag },
+    { path: '/admin/joueurs', label: 'Joueurs', icon: User },
     { path: '/admin/matchs', label: 'Matchs', icon: Calendar },
     { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: Users },
     { path: '/admin/scoring', label: 'Scoring', icon: Award },
@@ -18,8 +19,6 @@ const AdminLayout = () => {
     if (exact) {
       return location.pathname === path;
     }
-    // For non-exact matches, check if current path starts with the link path
-    // but avoid matching /admin for /admin/equipes etc
     if (path === '/admin') {
       return location.pathname === '/admin';
     }
