@@ -48,6 +48,7 @@ export const tournamentsAPI = {
   getById: (id) => api.get(`/tournaments/${id}`),
   getMatches: (id) => api.get(`/tournaments/${id}/matches`),
   getTeams: (id) => api.get(`/tournaments/${id}/teams`),
+  getStarted: (id) => api.get(`/tournaments/${id}/started`),
   getFormats: () => api.get('/tournaments/formats'),
   create: (data) => api.post('/tournaments', data),
   update: (id, data) => api.put(`/tournaments/${id}`, data),
