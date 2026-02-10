@@ -147,14 +147,14 @@ const MatchesPage = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+          <Link to={`/equipes/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team1_flag, match.team1_name)}
             <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team1_name}</p>
           </Link>
           <div className="flex-1 flex flex-col items-center">
             <div className="text-3xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
           </div>
-          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+          <Link to={`/equipes/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team2_flag, match.team2_name)}
             <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team2_name}</p>
           </Link>
@@ -195,7 +195,7 @@ const MatchesPage = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+          <Link to={`/equipes/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team1_flag, match.team1_name)}
             <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team1_name}</p>
           </Link>
@@ -231,7 +231,7 @@ const MatchesPage = () => {
             </p>
           </div>
 
-          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+          <Link to={`/equipes/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team2_flag, match.team2_name)}
             <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team2_name}</p>
           </Link>
@@ -275,7 +275,7 @@ const MatchesPage = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <Link to={`/equipe/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+          <Link to={`/equipes/${match.team1_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team1_flag, match.team1_name)}
             <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team1_name}</p>
           </Link>
@@ -283,7 +283,7 @@ const MatchesPage = () => {
             <div className="text-2xl font-bold text-white">{match.team1_score} - {match.team2_score}</div>
             <p className="text-xs text-gray-500 mt-1">{new Date(match.match_date).toLocaleDateString('fr-FR')}</p>
           </div>
-          <Link to={`/equipe/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
+          <Link to={`/equipes/${match.team2_id}`} className="flex-1 flex flex-col items-center hover:opacity-80">
             {renderFlag(match.team2_flag, match.team2_name)}
             <p className="text-white font-semibold mt-2 text-center hover:text-primary-400">{match.team2_name}</p>
           </Link>
