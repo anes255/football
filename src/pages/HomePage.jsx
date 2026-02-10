@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Calendar, Award, ArrowRight } from 'lucide-react';
+import { Trophy, Calendar, Award, ArrowRight, Eye } from 'lucide-react';
 import { tournamentsAPI, matchesAPI, leaderboardAPI, settingsAPI } from '../api';
+import UserPredictionsModal from '../components/UserPredictionsModal';
 
 const HomePage = () => {
   const [tournaments, setTournaments] = useState([]);
   const [liveMatches, setLiveMatches] = useState([]);
   const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [settings, setSettings] = useState({ site_logo: '', site_name: 'Prediction' });
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [settings, setSettings] = useState({ home_logo: '', home_name: 'Prediction World', site_logo: '', site_name: '' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,8 +85,8 @@ const HomePage = () => {
             animate={{ scale: 1, opacity: 1 }}
             className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-6 overflow-hidden"
           >
-            {settings.site_logo ? (
-              <img src={settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
+            {settings.home_logo || settings.site_logo ? (
+              <img src={settings.home_logo || settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
             ) : (
               <Trophy className="w-12 h-12 text-white" />
             )}
@@ -96,7 +98,7 @@ const HomePage = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold mb-4"
           >
-            <span className="gradient-text">{settings.site_name || 'Prediction World'}</span>
+            <span className="gradient-text">{settings.home_name || settings.site_name || 'Prediction World'}</span>
           </motion.h1>
 
           <motion.p
@@ -254,7 +256,8 @@ const HomePage = () => {
                     {leaderboard.map((player, index) => (
                       <div
                         key={player.id}
-                        className={`flex items-center space-x-3 p-3 rounded-lg ${
+                        onClick={() => setSelectedUser(player)}
+                        className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer hover:scale-[1.02] transition-all ${
                           index === 0 ? 'bg-yellow-500/10' :
                           index === 1 ? 'bg-gray-400/10' :
                           index === 2 ? 'bg-orange-500/10' : 'bg-white/5'
@@ -277,6 +280,7 @@ const HomePage = () => {
                         }`}>
                           {player.total_points || 0} pts
                         </div>
+                        <Eye className="w-4 h-4 text-gray-500" />
                       </div>
                     ))}
                   </div>
@@ -328,6 +332,10 @@ const HomePage = () => {
 
         </div>
       </div>
+
+      {selectedUser && (
+        <UserPredictionsModal userId={selectedUser.id} userName={selectedUser.name} onClose={() => setSelectedUser(null)} />
+      )}
     </div>
   );
 };
