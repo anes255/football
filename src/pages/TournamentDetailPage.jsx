@@ -236,12 +236,20 @@ const TournamentDetailPage = () => {
                     Vainqueur
                   </button>
                 )}
+                {user && (
+                  <button
+                    onClick={() => setActiveTab('players')}
+                    className={`pb-3 px-2 transition-colors ${activeTab === 'players' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Joueurs
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-          {/* Tournament Predictions - Best Player & Goal Scorer */}
-          {user && <TournamentPredictions tournamentId={id} />}
+          {/* Tournament Predictions - Best Player & Goal Scorer (own tab) */}
+          {activeTab === 'players' && user && <TournamentPredictions tournamentId={id} tournamentStarted={tournamentStarted} />}
 
           {activeTab === 'teams' && (
             <div className="space-y-6">
