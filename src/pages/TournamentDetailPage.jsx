@@ -203,10 +203,12 @@ const TournamentDetailPage = () => {
                 <div>
                   <div className="flex items-center space-x-3">
                     <h1 className="text-3xl font-bold text-white">{tournament.name}</h1>
-                    {tournament.is_active ? (
+                    {!tournament.is_active ? (
+                      <span className="bg-gray-500/20 text-gray-400 text-xs px-2 py-1 rounded-full">Terminé</span>
+                    ) : tournament.has_started ? (
                       <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full">En cours</span>
                     ) : (
-                      <span className="bg-gray-500/20 text-gray-400 text-xs px-2 py-1 rounded-full">Terminé</span>
+                      <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full">Pas commencé</span>
                     )}
                   </div>
                   {tournament.description && <p className="text-gray-400 mt-1">{tournament.description}</p>}
