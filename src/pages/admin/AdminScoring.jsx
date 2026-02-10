@@ -1,150 +1,140 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Save, Target, Trophy, User } from 'lucide-react';
-import { adminAPI } from '../../api';
+import { Award, Save, Trophy, User, Target, Info } from 'lucide-react';
+import { adminAPI, tournamentsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const AdminScoring = () => {
-  const [rules, setRules] = useState({ exact_score: 3, correct_winner: 2, correct_draw: 3, tournament_winner: 5, best_player: 7, best_goal_scorer: 7 });
+  const [tournaments, setTournaments] = useState([]);
+  const [selectedTournament, setSelectedTournament] = useState('global');
+  const [scoringRules, setScoringRules] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { fetchRules(); }, []);
-  
-  const fetchRules = async () => { 
-    try { 
-      const r = await adminAPI.getScoringRules(); 
-      const obj = {}; 
-      r.data.forEach(rule => { obj[rule.rule_type] = rule.points; }); 
-      setRules({ 
-        exact_score: obj.exact_score || 3, 
-        correct_winner: obj.correct_winner || 2, 
-        correct_draw: obj.correct_draw || 3, 
-        tournament_winner: obj.tournament_winner || 5,
-        best_player: obj.best_player || 7,
-        best_goal_scorer: obj.best_goal_scorer || 7
-      }); 
-    } catch (e) { 
-      console.error(e); 
-    } finally { 
-      setLoading(false); 
-    } 
-  };
-  
-  const handleSave = async () => { 
-    setSaving(true); 
-    try { 
-      await adminAPI.updateScoringRules(rules); 
-      toast.success('Règles mises à jour !'); 
-    } catch (e) { 
-      toast.error('Erreur'); 
-    } finally { 
-      setSaving(false); 
-    } 
-  };
-
-  const ruleCards = [
-    { key: 'exact_score', label: 'Score Exact', description: 'Le pronostic correspond exactement au résultat', icon: Target, color: 'green' },
-    { key: 'correct_winner', label: 'Vainqueur Correct', description: 'Le bon vainqueur est prédit', icon: Award, color: 'blue' },
-    { key: 'correct_draw', label: 'Match Nul Correct', description: 'Un match nul est correctement prédit', icon: Award, color: 'purple' },
-    { key: 'tournament_winner', label: 'Vainqueur du Tournoi', description: 'Bonus si l\'équipe prédite remporte le tournoi', icon: Trophy, color: 'yellow' },
-    { key: 'best_player', label: 'Meilleur Joueur', description: 'Bonus si le meilleur joueur prédit est le bon', icon: User, color: 'cyan' },
-    { key: 'best_goal_scorer', label: 'Meilleur Buteur', description: 'Bonus si le meilleur buteur prédit est le bon', icon: Target, color: 'red' }
-  ];
-
-  const getColorClasses = (color) => {
-    const map = {
-      green: { bg: 'bg-green-500/20', text: 'text-green-500' },
-      blue: { bg: 'bg-blue-500/20', text: 'text-blue-500' },
-      purple: { bg: 'bg-purple-500/20', text: 'text-purple-500' },
-      yellow: { bg: 'bg-yellow-500/20', text: 'text-yellow-500' },
-      cyan: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
-      red: { bg: 'bg-red-500/20', text: 'text-red-500' }
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        const res = await tournamentsAPI.getAll();
+        setTournaments(res.data || []);
+      } catch (e) { console.error(e); }
     };
-    return map[color] || map.blue;
+    fetchTournaments();
+  }, []);
+
+  useEffect(() => { fetchRules(); }, [selectedTournament]);
+
+  const fetchRules = async () => {
+    setLoading(true);
+    try {
+      if (selectedTournament === 'global') {
+        const res = await adminAPI.getScoringRules();
+        const obj = {};
+        (res.data || []).forEach(r => { obj[r.rule_type] = r.points; });
+        setScoringRules(obj);
+      } else {
+        const res = await tournamentsAPI.getScoringRules(selectedTournament);
+        setScoringRules(res.data || {});
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const handleRuleChange = (ruleType, value) => {
+    setScoringRules({ ...scoringRules, [ruleType]: parseInt(value) || 0 });
+  };
+
+  const saveRules = async () => {
+    setSaving(true);
+    try {
+      if (selectedTournament === 'global') {
+        await adminAPI.updateScoringRules(scoringRules);
+      } else {
+        await adminAPI.updateTournamentScoringRules(selectedTournament, scoringRules);
+      }
+      toast.success('Règles sauvegardées');
+    } catch (e) { toast.error('Erreur'); }
+    finally { setSaving(false); }
+  };
+
+  const ruleLabels = {
+    exact_score: { label: 'Score exact', desc: 'Les deux scores parfaitement prédits', example: '2-1 → 2-1', color: 'text-green-400' },
+    correct_winner: { label: 'Bon vainqueur', desc: 'Bonne équipe gagnante, score inexact', example: '3-0 prédit, 2-1 réel', color: 'text-yellow-400' },
+    correct_draw: { label: 'Match nul correct', desc: 'Nul prédit et résultat nul', example: '1-1 prédit, 0-0 réel', color: 'text-yellow-400' },
+    correct_goal_diff: { label: 'Bonne diff. de buts', desc: 'Bonus si différence de buts correcte', example: '2-0 prédit, 3-1 réel', color: 'text-blue-400' },
+    one_team_goals: { label: 'Buts d\'une équipe', desc: 'Bonus par équipe avec buts corrects', example: '2-1 prédit, 2-0 réel', color: 'text-blue-400' },
+    tournament_winner: { label: 'Vainqueur tournoi', desc: 'Prédiction correcte du vainqueur', example: '', color: 'text-yellow-400' },
+    best_player: { label: 'Meilleur joueur', desc: 'Prédiction correcte meilleur joueur', example: '', color: 'text-cyan-400' },
+    best_goal_scorer: { label: 'Meilleur buteur', desc: 'Prédiction correcte meilleur buteur', example: '', color: 'text-red-400' },
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-display text-4xl gradient-text tracking-wider">Règles de Scoring</h1>
-        <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center space-x-2">
-          {saving ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <><Save className="w-5 h-5" /><span>Sauvegarder</span></>}
-        </button>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
+          <Award className="w-8 h-8 text-yellow-500" /><span>Scoring</span>
+        </h1>
       </div>
-      
+
+      {/* Tournament Selector */}
+      <div className="card">
+        <div className="flex items-center space-x-2 mb-4">
+          <Info className="w-5 h-5 text-blue-400" />
+          <p className="text-sm text-gray-400">Chaque tournoi peut avoir son propre système de points. Les règles globales servent de valeurs par défaut.</p>
+        </div>
+        <select
+          value={selectedTournament}
+          onChange={(e) => setSelectedTournament(e.target.value)}
+          className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
+        >
+          <option value="global">🌐 Règles globales (par défaut)</option>
+          {tournaments.map(t => (
+            <option key={t.id} value={t.id}>🏆 {t.name}</option>
+          ))}
+        </select>
+      </div>
+
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full" />
-        </div>
+        <div className="flex items-center justify-center py-12"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {ruleCards.map((rule, i) => {
-            const colors = getColorClasses(rule.color);
-            return (
-              <motion.div key={rule.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="card">
-                <div className="flex items-start space-x-4">
-                  <div className={`p-3 rounded-xl ${colors.bg}`}>
-                    <rule.icon className={`w-6 h-6 ${colors.text}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">{rule.label}</h3>
-                    <p className="text-sm text-gray-400 mb-4">{rule.description}</p>
-                    <div className="flex items-center space-x-4">
-                      <input 
-                        type="number" 
-                        min="0" 
-                        value={rules[rule.key]} 
-                        onChange={(e) => setRules({ ...rules, [rule.key]: parseInt(e.target.value) || 0 })} 
-                        className="w-24 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-white text-center text-xl font-bold focus:outline-none focus:border-primary-500" 
-                      />
-                      <span className="text-gray-400">points</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-      
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="card mt-8">
-        <h2 className="font-display text-2xl text-white mb-4">Aperçu des points</h2>
-        <div className="bg-white/5 rounded-xl p-4">
-          <p className="text-gray-300 mb-2">Exemple: Match <span className="text-white font-semibold">Équipe A 2 - 1 Équipe B</span></p>
-          <ul className="space-y-2 text-sm">
-            <li className="flex justify-between">
-              <span className="text-gray-400">Pronostic 2-1 (score exact)</span>
-              <span className="text-green-500 font-bold">+{rules.exact_score} pts</span>
-            </li>
-            <li className="flex justify-between">
-              <span className="text-gray-400">Pronostic 1-0 (bon vainqueur)</span>
-              <span className="text-blue-500 font-bold">+{rules.correct_winner} pts</span>
-            </li>
-            <li className="flex justify-between">
-              <span className="text-gray-400">Pronostic 0-1 (mauvais)</span>
-              <span className="text-red-500 font-bold">0 pt</span>
-            </li>
-          </ul>
-          <div className="border-t border-white/10 mt-3 pt-3">
-            <p className="text-gray-300 mb-2">Prédictions de tournoi</p>
-            <ul className="space-y-2 text-sm">
-              <li className="flex justify-between">
-                <span className="text-gray-400">Vainqueur du tournoi correct</span>
-                <span className="text-yellow-500 font-bold">+{rules.tournament_winner} pts</span>
-              </li>
-              <li className="flex justify-between">
-                <span className="text-gray-400">Meilleur joueur correct</span>
-                <span className="text-cyan-500 font-bold">+{rules.best_player} pts</span>
-              </li>
-              <li className="flex justify-between">
-                <span className="text-gray-400">Meilleur buteur correct</span>
-                <span className="text-red-500 font-bold">+{rules.best_goal_scorer} pts</span>
-              </li>
-            </ul>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">
+              {selectedTournament === 'global' ? 'Règles globales' : tournaments.find(t => t.id.toString() === selectedTournament)?.name || 'Tournoi'}
+            </h2>
+            <button onClick={saveRules} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
+              <Save className="w-4 h-4" /><span>Sauvegarder</span>
+            </button>
           </div>
-        </div>
-      </motion.div>
+
+          <div className="space-y-3">
+            {Object.keys(ruleLabels).map(ruleType => (
+              <div key={ruleType} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                <div className="flex-1">
+                  <p className={`font-medium ${ruleLabels[ruleType].color}`}>{ruleLabels[ruleType].label}</p>
+                  <p className="text-sm text-gray-400">{ruleLabels[ruleType].desc}</p>
+                  {ruleLabels[ruleType].example && <p className="text-xs text-gray-500 mt-1">Ex: {ruleLabels[ruleType].example}</p>}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input type="number" min="0" max="50" value={scoringRules[ruleType] || 0} onChange={(e) => handleRuleChange(ruleType, e.target.value)} className="w-20 bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-center" />
+                  <span className="text-gray-400 text-sm">pts</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Example */}
+          <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+            <h3 className="text-blue-400 font-medium mb-2">Exemple de calcul</h3>
+            <p className="text-sm text-gray-400">Match réel: <span className="text-white">France 2-1 Maroc</span></p>
+            <div className="text-sm text-gray-400 mt-2 space-y-1">
+              <p>• Prono <span className="text-green-400">2-1</span> = {scoringRules.exact_score || 0} pts (score exact)</p>
+              <p>• Prono <span className="text-yellow-400">3-2</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_diff || 0)} pts (bon vainqueur + même diff)</p>
+              <p>• Prono <span className="text-yellow-400">2-0</span> = {(scoringRules.correct_winner || 0) + (scoringRules.one_team_goals || 0)} pts (bon vainqueur + buts équipe 1)</p>
+              <p>• Prono <span className="text-red-400">0-2</span> = 0 pts (mauvais vainqueur)</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
