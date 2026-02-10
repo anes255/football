@@ -239,7 +239,7 @@ const TournamentDetailPage = () => {
                     Vainqueur
                   </button>
                 )}
-                {user && (
+                {user && tournament?.enable_player_predictions && (
                   <button
                     onClick={() => setActiveTab('players')}
                     className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'players' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
@@ -252,7 +252,7 @@ const TournamentDetailPage = () => {
           )}
 
           {/* Tournament Predictions - Best Player & Goal Scorer (own tab) */}
-          {activeTab === 'players' && user && <TournamentPredictions tournamentId={id} tournamentStarted={tournamentStarted} />}
+          {activeTab === 'players' && user && tournament?.enable_player_predictions && <TournamentPredictions tournamentId={id} tournamentStarted={tournamentStarted} />}
 
           {activeTab === 'teams' && (
             <div className="space-y-6">
