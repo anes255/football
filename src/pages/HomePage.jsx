@@ -160,14 +160,14 @@ const HomePage = () => {
                       <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <Link to={`/equipe/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
+                      <Link to={`/equipes/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
                         {renderFlag(match.team1_flag, match.team1_name)}
                         <span className="text-white text-sm truncate">{match.team1_name}</span>
                       </Link>
                       <div className="px-4 text-center">
                         <div className="text-2xl font-bold text-red-400">{match.team1_score ?? 0} - {match.team2_score ?? 0}</div>
                       </div>
-                      <Link to={`/equipe/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
+                      <Link to={`/equipes/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
                         <span className="text-white text-sm truncate">{match.team2_name}</span>
                         {renderFlag(match.team2_flag, match.team2_name)}
                       </Link>
@@ -209,7 +209,7 @@ const HomePage = () => {
                     {upcomingMatches.map((match) => (
                       <div key={match.id} className="py-4 first:pt-0 last:pb-0">
                         <div className="flex items-center justify-between">
-                          <Link to={`/equipe/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
+                          <Link to={`/equipes/${match.team1_id}`} className="flex items-center space-x-2 flex-1 min-w-0 hover:opacity-80">
                             {renderFlag(match.team1_flag, match.team1_name)}
                             <span className="text-white text-sm truncate">{match.team1_name}</span>
                           </Link>
@@ -217,7 +217,7 @@ const HomePage = () => {
                             <div className="text-xs text-gray-500">{formatDate(match.match_date)}</div>
                             <div className="text-orange-400 font-semibold">VS</div>
                           </div>
-                          <Link to={`/equipe/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
+                          <Link to={`/equipes/${match.team2_id}`} className="flex items-center space-x-2 flex-1 min-w-0 justify-end hover:opacity-80">
                             <span className="text-white text-sm truncate">{match.team2_name}</span>
                             {renderFlag(match.team2_flag, match.team2_name)}
                           </Link>
