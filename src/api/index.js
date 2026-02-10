@@ -37,6 +37,7 @@ export const authAPI = {
 export const teamsAPI = {
   getAll: () => api.get('/teams'),
   getById: (id) => api.get(`/teams/${id}`),
+  getByTournament: () => api.get('/teams-by-tournament'),
   create: (data) => api.post('/teams', data),
   update: (id, data) => api.put(`/teams/${id}`, data),
   delete: (id) => api.delete(`/teams/${id}`),
@@ -50,18 +51,16 @@ export const tournamentsAPI = {
   getTeams: (id) => api.get(`/tournaments/${id}/teams`),
   getStarted: (id) => api.get(`/tournaments/${id}/started`),
   getFormats: () => api.get('/tournaments/formats'),
+  getScoringRules: (id) => api.get(`/tournaments/${id}/scoring-rules`),
   create: (data) => api.post('/tournaments', data),
   update: (id, data) => api.put(`/tournaments/${id}`, data),
   delete: (id) => api.delete(`/tournaments/${id}`),
-  // Players
   getPlayers: (tournamentId) => api.get(`/tournaments/${tournamentId}/players`),
   createPlayer: (tournamentId, data) => api.post(`/tournaments/${tournamentId}/players`, data),
   updatePlayer: (playerId, data) => api.put(`/players/${playerId}`, data),
   deletePlayer: (playerId) => api.delete(`/players/${playerId}`),
-  // Player predictions
   getMyPrediction: (tournamentId) => api.get(`/tournaments/${tournamentId}/my-player-prediction`),
   savePrediction: (tournamentId, data) => api.post(`/tournaments/${tournamentId}/player-prediction`, data),
-  // Admin: set winners
   setWinners: (tournamentId, data) => api.post(`/admin/tournaments/${tournamentId}/set-player-winners`, data),
 };
 
@@ -96,6 +95,7 @@ export const tournamentWinnerAPI = {
 
 export const leaderboardAPI = {
   getAll: () => api.get('/leaderboard'),
+  getByTournament: (id) => api.get(`/leaderboard/tournament/${id}`),
 };
 
 export const settingsAPI = {
@@ -108,6 +108,7 @@ export const adminAPI = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getScoringRules: () => api.get('/admin/scoring-rules'),
   updateScoringRules: (data) => api.put('/admin/scoring-rules', data),
+  updateTournamentScoringRules: (id, data) => api.put(`/admin/tournaments/${id}/scoring-rules`, data),
   getSettings: () => api.get('/settings'),
   updateSettings: (data) => api.put('/admin/settings', data),
   bulkAddTournamentTeams: (id, data) => api.post(`/admin/tournaments/${id}/teams`, data),
