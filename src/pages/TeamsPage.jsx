@@ -172,7 +172,7 @@ const TeamsPage = () => {
                       {groups[groupName].map(team => (
                         <Link
                           key={team.team_id || team.id}
-                          to={`/equipe/${team.team_id || team.id}`}
+                          to={`/equipes/${team.team_id || team.id}`}
                           className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/5 transition-all group"
                         >
                           {renderFlag(team.flag_url, team.name)}
