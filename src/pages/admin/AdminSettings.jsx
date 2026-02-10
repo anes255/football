@@ -1,91 +1,38 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Palette, Trophy, Save, Image, Upload, X, Globe } from 'lucide-react';
+import { Settings, Palette, Trophy, Save, Image, Upload, X, Globe, Layout } from 'lucide-react';
 import { adminAPI, teamsAPI, tournamentsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const AdminSettings = () => {
-  const [scoringRules, setScoringRules] = useState({});
   const [settings, setSettings] = useState({
-    primary_color: '#6366f1',
-    accent_color: '#8b5cf6',
-    bg_color: '#0f172a',
-    card_color: '#1e293b',
-    site_logo: '',
-    site_name: 'Prediction World'
+    primary_color: '#6366f1', accent_color: '#8b5cf6', bg_color: '#0f172a', card_color: '#1e293b',
+    header_name: 'Prediction World', header_logo: '',
+    home_name: 'Prediction World', home_logo: '',
   });
-  const [teams, setTeams] = useState([]);
-  const [tournaments, setTournaments] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState('');
-  const [selectedWinner, setSelectedWinner] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await adminAPI.getSettings();
+        setSettings(prev => ({ ...prev, ...res.data }));
+      } catch (e) { toast.error('Erreur de chargement'); }
+      finally { setLoading(false); }
+    };
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [rulesRes, settingsRes, teamsRes, tournamentsRes] = await Promise.all([
-        adminAPI.getScoringRules(),
-        adminAPI.getSettings(),
-        teamsAPI.getAll(),
-        tournamentsAPI.getAll()
-      ]);
-      
-      const rulesObj = {};
-      (rulesRes.data || []).forEach(r => { rulesObj[r.rule_type] = r.points; });
-      setScoringRules(rulesObj);
-      setSettings({ ...settings, ...settingsRes.data });
-      setTeams(teamsRes.data || []);
-      setTournaments(tournamentsRes.data || []);
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Erreur de chargement');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSettingChange = (key, value) => setSettings({ ...settings, [key]: value });
 
-  const handleRuleChange = (ruleType, value) => {
-    setScoringRules({ ...scoringRules, [ruleType]: parseInt(value) || 0 });
-  };
-
-  const handleSettingChange = (key, value) => {
-    setSettings({ ...settings, [key]: value });
-  };
-
-  const handleLogoUpload = (e) => {
+  const handleLogoUpload = (key) => (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    if (file.size > 1000000) { // 1MB limit
-      toast.error('Image trop grande (max 1MB)');
-      return;
-    }
-    
+    if (file.size > 1000000) { toast.error('Image trop grande (max 1MB)'); return; }
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setSettings({ ...settings, site_logo: reader.result });
-    };
+    reader.onloadend = () => setSettings({ ...settings, [key]: reader.result });
     reader.readAsDataURL(file);
-  };
-
-  const removeLogo = () => {
-    setSettings({ ...settings, site_logo: '' });
-  };
-
-  const saveScoringRules = async () => {
-    setSaving(true);
-    try {
-      await adminAPI.updateScoringRules(scoringRules);
-      toast.success('Règles de points mises à jour');
-    } catch (error) {
-      toast.error('Erreur');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const saveSettings = async () => {
@@ -93,212 +40,79 @@ const AdminSettings = () => {
     try {
       await adminAPI.updateSettings(settings);
       toast.success('Paramètres mis à jour');
-      applyColors(settings);
-    } catch (error) {
-      toast.error('Erreur');
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { toast.error('Erreur'); }
+    finally { setSaving(false); }
   };
 
-  const applyColors = (colorSettings) => {
-    const root = document.documentElement;
-    if (colorSettings.primary_color) {
-      root.style.setProperty('--color-primary-500', colorSettings.primary_color);
-    }
-    if (colorSettings.accent_color) {
-      root.style.setProperty('--color-accent-500', colorSettings.accent_color);
-    }
-    if (colorSettings.bg_color) {
-      root.style.setProperty('--color-bg', colorSettings.bg_color);
-    }
-  };
+  if (loading) return <div className="flex items-center justify-center p-12"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div></div>;
 
-  const awardTournamentWinner = async () => {
-    if (!selectedTournament || !selectedWinner) {
-      toast.error('Sélectionnez un tournoi et une équipe');
-      return;
-    }
-    try {
-      const res = await adminAPI.awardTournamentWinner({ 
-        tournament_id: parseInt(selectedTournament), 
-        team_id: parseInt(selectedWinner) 
-      });
-      toast.success(res.data.message);
-    } catch (error) {
-      toast.error('Erreur');
-    }
-  };
-
-  const ruleLabels = {
-    exact_score: { label: 'Score exact', description: 'Les deux scores sont parfaitement prédits (ex: 2-1 → 2-1)', example: '2-1 → 2-1' },
-    correct_winner: { label: 'Bon vainqueur', description: 'La bonne équipe gagnante est prédite mais pas le score exact', example: '3-0 prédit, 2-1 réel' },
-    correct_draw: { label: 'Match nul correct', description: 'Un match nul est prédit et le résultat est un nul', example: '1-1 prédit, 0-0 réel' },
-    correct_goal_diff: { label: 'Bonne différence de buts', description: 'Bonus si la différence de buts est correcte avec le bon vainqueur', example: '2-0 prédit, 3-1 réel (+1)' },
-    one_team_goals: { label: 'Buts d\'une équipe corrects', description: 'Bonus pour chaque équipe dont les buts sont correctement prédits', example: '2-1 prédit, 2-0 réel (+1 pour équipe 1)' },
-    tournament_winner: { label: 'Vainqueur du tournoi', description: 'Bonus si l\'utilisateur a prédit la bonne équipe gagnante du tournoi', example: '' }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+  const LogoSection = ({ label, desc, logoKey, nameKey, nameLabel }) => (
+    <div className="p-4 bg-white/5 rounded-xl">
+      <h3 className="font-semibold text-white mb-4">{label}</h3>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">{nameLabel || 'Nom'}</label>
+          <input type="text" value={settings[nameKey] || ''} onChange={(e) => handleSettingChange(nameKey, e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white" placeholder="Prediction World" />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Logo</label>
+          <div className="flex items-center space-x-4">
+            {settings[logoKey] ? (
+              <div className="relative">
+                <img src={settings[logoKey]} alt="Logo" className="w-16 h-16 object-contain rounded-xl bg-white/5 p-1" />
+                <button onClick={() => handleSettingChange(logoKey, '')} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"><X className="w-3 h-3 text-white" /></button>
+              </div>
+            ) : (
+              <label className="flex items-center space-x-2 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl cursor-pointer hover:bg-gray-600 transition-colors">
+                <Upload className="w-4 h-4 text-gray-400" /><span className="text-gray-400 text-sm">Uploader</span>
+                <input type="file" accept="image/*" onChange={handleLogoUpload(logoKey)} className="hidden" />
+              </label>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">{desc}</p>
+        </div>
       </div>
-    );
-  }
+      {/* Preview */}
+      <div className="mt-4 p-3 bg-gray-900/80 rounded-xl border border-white/10 flex items-center space-x-2">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center overflow-hidden shrink-0">
+          {settings[logoKey] ? <img src={settings[logoKey]} alt="Logo" className="w-full h-full object-cover" /> : <Globe className="w-6 h-6 text-white" />}
+        </div>
+        <span className="font-bold text-lg gradient-text">{settings[nameKey] || 'Prediction World'}</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
-        <Settings className="w-8 h-8 text-primary-500" />
-        <span>Paramètres</span>
+        <Settings className="w-8 h-8 text-primary-500" /><span>Paramètres</span>
       </h1>
 
-      {/* Site Branding */}
+      {/* Branding */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Image className="w-5 h-5 text-blue-500" />
-            <span>Branding du Site</span>
+            <Image className="w-5 h-5 text-blue-500" /><span>Branding</span>
           </h2>
           <button onClick={saveSettings} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
-            <Save className="w-4 h-4" />
-            <span>Sauvegarder</span>
+            <Save className="w-4 h-4" /><span>Sauvegarder</span>
           </button>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Site Name */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Nom du site</label>
-            <input
-              type="text"
-              value={settings.site_name || ''}
-              onChange={(e) => handleSettingChange('site_name', e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
-              placeholder="Prediction World"
-            />
-          </div>
-
-          {/* Logo Upload */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Logo du site (affiché dans l'en-tête et la page d'accueil)</label>
-            <div className="flex items-center space-x-4">
-              {settings.site_logo ? (
-                <div className="relative">
-                  <img 
-                    src={settings.site_logo} 
-                    alt="Logo" 
-                    className="w-20 h-20 object-contain rounded-xl bg-white/5 p-2"
-                  />
-                  <button 
-                    onClick={removeLogo}
-                    className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="w-20 h-20 rounded-xl bg-white/5 flex items-center justify-center">
-                  <Image className="w-8 h-8 text-gray-500" />
-                </div>
-              )}
-              <label className="btn-secondary cursor-pointer flex items-center space-x-2">
-                <Upload className="w-4 h-4" />
-                <span>Télécharger logo</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleLogoUpload} 
-                  className="hidden" 
-                />
-              </label>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Format: PNG, JPG. Max 1MB. Ce logo sera affiché dans l'en-tête du site et sur la page d'accueil.</p>
-          </div>
-        </div>
-
-        {/* Preview */}
-        <div className="mt-6 p-4 bg-white/5 rounded-xl">
-          <p className="text-sm text-gray-400 mb-3">Aperçu de l'en-tête:</p>
-          <div className="flex items-center space-x-2 p-3 bg-gray-900/80 rounded-xl border border-white/10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center overflow-hidden">
-              {settings.site_logo ? (
-                <img src={settings.site_logo} alt="Logo" className="w-full h-full object-cover" />
-              ) : (
-                <Globe className="w-6 h-6 text-white" />
-              )}
-            </div>
-            <span className="font-bold text-xl">
-              <span className="gradient-text">{settings.site_name || 'Prediction World'}</span>
-            </span>
-          </div>
+        <div className="space-y-6">
+          <LogoSection label="En-tête (barre de navigation)" desc="Affiché dans la barre de navigation en haut" logoKey="header_logo" nameKey="header_name" nameLabel="Nom dans l'en-tête" />
+          <LogoSection label="Page d'accueil (héro)" desc="Affiché en grand sur la page d'accueil" logoKey="home_logo" nameKey="home_name" nameLabel="Nom sur la page d'accueil" />
         </div>
       </motion.div>
 
-      {/* Scoring Rules */}
+      {/* Colors */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Trophy className="w-5 h-5 text-yellow-500" />
-            <span>Système de Points</span>
-          </h2>
-          <button onClick={saveScoringRules} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
-            <Save className="w-4 h-4" />
-            <span>Sauvegarder</span>
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {Object.keys(ruleLabels).map(ruleType => (
-            <div key={ruleType} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-              <div className="flex-1">
-                <p className="text-white font-medium">{ruleLabels[ruleType].label}</p>
-                <p className="text-sm text-gray-400">{ruleLabels[ruleType].description}</p>
-                {ruleLabels[ruleType].example && (
-                  <p className="text-xs text-primary-400 mt-1">Ex: {ruleLabels[ruleType].example}</p>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
-                  value={scoringRules[ruleType] || 0}
-                  onChange={(e) => handleRuleChange(ruleType, e.target.value)}
-                  className="w-20 bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-center"
-                />
-                <span className="text-gray-400">pts</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Example Calculation */}
-        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-          <h3 className="text-blue-400 font-medium mb-2">Exemple de calcul</h3>
-          <p className="text-sm text-gray-400">
-            Match réel: <span className="text-white">France 2-1 Maroc</span>
-          </p>
-          <ul className="text-sm text-gray-400 mt-2 space-y-1">
-            <li>• Prono <span className="text-green-400">2-1</span> = {scoringRules.exact_score || 0} pts (score exact)</li>
-            <li>• Prono <span className="text-yellow-400">3-2</span> = {(scoringRules.correct_winner || 0) + (scoringRules.correct_goal_diff || 0)} pts (bon vainqueur + même diff buts)</li>
-            <li>• Prono <span className="text-yellow-400">2-0</span> = {(scoringRules.correct_winner || 0) + (scoringRules.one_team_goals || 0)} pts (bon vainqueur + buts équipe 1)</li>
-            <li>• Prono <span className="text-red-400">0-2</span> = 0 pts (mauvais vainqueur)</li>
-          </ul>
-        </div>
-      </motion.div>
-
-      {/* Site Colors */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Palette className="w-5 h-5 text-purple-500" />
-            <span>Couleurs du Site</span>
+            <Palette className="w-5 h-5 text-purple-500" /><span>Couleurs du Site</span>
           </h2>
           <button onClick={saveSettings} disabled={saving} className="btn-primary text-sm flex items-center space-x-2">
-            <Save className="w-4 h-4" />
-            <span>Sauvegarder</span>
+            <Save className="w-4 h-4" /><span>Sauvegarder</span>
           </button>
         </div>
 
@@ -310,91 +124,14 @@ const AdminSettings = () => {
             { key: 'card_color', label: 'Cartes', desc: 'Fond des cartes' }
           ].map(({ key, label, desc }) => (
             <div key={key} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-              <div>
-                <p className="text-white font-medium">{label}</p>
-                <p className="text-sm text-gray-400">{desc}</p>
-              </div>
+              <div><p className="text-white font-medium">{label}</p><p className="text-sm text-gray-400">{desc}</p></div>
               <div className="flex items-center space-x-3">
-                <input
-                  type="color"
-                  value={settings[key] || '#6366f1'}
-                  onChange={(e) => handleSettingChange(key, e.target.value)}
-                  className="w-12 h-12 rounded-lg cursor-pointer border-2 border-white/20"
-                />
-                <input
-                  type="text"
-                  value={settings[key] || ''}
-                  onChange={(e) => handleSettingChange(key, e.target.value)}
-                  className="w-24 bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm"
-                />
+                <input type="color" value={settings[key] || '#6366f1'} onChange={(e) => handleSettingChange(key, e.target.value)} className="w-12 h-12 rounded-lg cursor-pointer border-2 border-white/20" />
+                <input type="text" value={settings[key] || ''} onChange={(e) => handleSettingChange(key, e.target.value)} className="w-24 bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" />
               </div>
             </div>
           ))}
         </div>
-
-        {/* Color Preview */}
-        <div className="mt-6 p-4 rounded-xl" style={{ backgroundColor: settings.card_color }}>
-          <h3 className="font-medium mb-3 text-white">Aperçu</h3>
-          <div className="flex space-x-3">
-            <button 
-              className="px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: settings.primary_color }}
-            >
-              Bouton Primaire
-            </button>
-            <button 
-              className="px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: settings.accent_color }}
-            >
-              Bouton Accent
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Award Tournament Winner */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card">
-        <h2 className="text-xl font-bold text-white flex items-center space-x-2 mb-6">
-          <Trophy className="w-5 h-5 text-yellow-500" />
-          <span>Attribuer Bonus Vainqueur Tournoi</span>
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Tournoi</label>
-            <select
-              value={selectedTournament}
-              onChange={(e) => setSelectedTournament(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
-            >
-              <option value="">Sélectionner un tournoi</option>
-              {tournaments.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Équipe Gagnante</label>
-            <select
-              value={selectedWinner}
-              onChange={(e) => setSelectedWinner(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-xl py-3 px-4 text-white"
-            >
-              <option value="">Sélectionner l'équipe</option>
-              {teams.map(team => (
-                <option key={team.id} value={team.id}>{team.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <button onClick={awardTournamentWinner} className="btn-primary flex items-center space-x-2">
-          <Trophy className="w-5 h-5" />
-          <span>Attribuer {scoringRules.tournament_winner || 10} pts aux gagnants</span>
-        </button>
-        <p className="text-sm text-gray-400 mt-2">
-          Tous les utilisateurs ayant prédit cette équipe comme vainqueur du tournoi recevront {scoringRules.tournament_winner || 10} points bonus.
-        </p>
       </motion.div>
     </div>
   );
