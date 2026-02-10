@@ -174,7 +174,7 @@ const AdminTournaments = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <span className={`text-xs px-2 py-1 rounded-full ${tournament.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                  {tournament.is_active ? 'Actif' : 'Inactif'}
+                  {tournament.is_active ? 'En cours' : 'Terminé'}
                 </span>
                 <button onClick={() => setShowGroupsModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-blue-400" title="Gérer groupes">
                   <Users className="w-5 h-5" />
