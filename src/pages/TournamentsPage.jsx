@@ -175,9 +175,13 @@ const TournamentCard = ({ tournament, index, inactive }) => {
               <h3 className="text-xl font-bold text-white group-hover:text-primary-400 transition-colors truncate">
                 {tournament.name}
               </h3>
-              {tournament.is_active && (
+              {tournament.is_active ? (
                 <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full">
                   En cours
+                </span>
+              ) : (
+                <span className="bg-gray-500/20 text-gray-400 text-xs px-2 py-1 rounded-full">
+                  Terminé
                 </span>
               )}
             </div>
