@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Plus, Edit, Trash2, Users, Save, X, Crown } from 'lucide-react';
+import { Trophy, Plus, Edit, Trash2, Users, Save, X, Crown, Play } from 'lucide-react';
 import { tournamentsAPI, teamsAPI, adminAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -70,6 +70,21 @@ const AdminTournaments = () => {
       toast.success('Tournoi supprimé');
       fetchData();
     } catch (error) { toast.error('Erreur'); }
+  };
+
+  const handleStart = async (tournament) => {
+    if (!confirm(`Démarrer "${tournament.name}" ? Les utilisateurs ne pourront plus prédire le vainqueur ni les joueurs.`)) return;
+    try {
+      await adminAPI.startTournament(tournament.id);
+      toast.success('Tournoi démarré !');
+      fetchData();
+    } catch (error) { toast.error('Erreur'); }
+  };
+
+  const getTournamentStatus = (t) => {
+    if (!t.is_active) return { label: 'Terminé', color: 'bg-gray-500/20 text-gray-400' };
+    if (t.has_started) return { label: 'En cours', color: 'bg-green-500/20 text-green-400' };
+    return { label: 'Pas commencé', color: 'bg-blue-500/20 text-blue-400' };
   };
 
   const getFormatLabel = (format) => formats.find(f => f.value === format)?.label || format;
@@ -172,16 +187,23 @@ const AdminTournaments = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <span className={`text-xs px-2 py-1 rounded-full ${tournament.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                  {tournament.is_active ? 'En cours' : 'Terminé'}
-                </span>
+              <div className="flex items-center space-x-2 flex-wrap gap-y-2">
+                {(() => { const s = getTournamentStatus(tournament); return (
+                  <span className={`text-xs px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
+                ); })()}
+                {!tournament.has_started && tournament.is_active && (
+                  <button onClick={() => handleStart(tournament)} className="p-2 hover:bg-green-500/20 rounded-lg text-green-400" title="Démarrer le tournoi">
+                    <Play className="w-5 h-5" />
+                  </button>
+                )}
                 <button onClick={() => setShowGroupsModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-blue-400" title="Gérer groupes">
                   <Users className="w-5 h-5" />
                 </button>
-                <button onClick={() => setShowWinnerModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-yellow-400" title="Déclarer vainqueur">
-                  <Crown className="w-5 h-5" />
-                </button>
+                {tournament.has_started && tournament.is_active && (
+                  <button onClick={() => setShowWinnerModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-yellow-400" title="Déclarer vainqueur">
+                    <Crown className="w-5 h-5" />
+                  </button>
+                )}
                 <button onClick={() => handleEdit(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
                   <Edit className="w-5 h-5" />
                 </button>
