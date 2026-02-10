@@ -54,7 +54,7 @@ function AppContent() {
         <Route path="/tournois" element={<TournamentsPage />} />
         <Route path="/tournois/:id" element={<TournamentDetailPage />} />
         <Route path="/equipes" element={<TeamsPage />} />
-        <Route path="/equipe/:id" element={<TeamPage />} />
+        <Route path="/equipes/:id" element={<TeamPage />} />
         <Route path="/classement" element={<LeaderboardPage />} />
         <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
