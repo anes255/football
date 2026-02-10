@@ -114,6 +114,7 @@ export const adminAPI = {
   bulkAddTournamentTeams: (id, data) => api.post(`/admin/tournaments/${id}/teams`, data),
   getTournamentTeams: (id) => api.get(`/tournaments/${id}/teams`),
   awardTournamentWinner: (data) => api.post('/admin/award-winner', data),
+  startTournament: (id) => api.post(`/admin/tournaments/${id}/start`),
 };
 
 export const validateAlgerianPhone = (phone) => {
