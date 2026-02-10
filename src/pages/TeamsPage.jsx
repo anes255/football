@@ -74,26 +74,20 @@ const TeamsPage = () => {
         </div>
 
         {/* Tournament Selector */}
-        <div className="flex flex-wrap gap-3 mb-6 justify-center">
-          {tournaments.map(t => (
-            <button
-              key={t.id}
-              onClick={() => selectTournament(t)}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border ${
-                selectedTournament?.id === t.id
-                  ? 'bg-primary-500/20 border-primary-500/50 text-primary-400'
-                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {t.logo_url ? (
-                <img src={t.logo_url} alt={t.name} className="w-6 h-6 rounded object-cover" />
-              ) : (
-                <Trophy className="w-4 h-4" />
-              )}
-              <span>{t.name}</span>
-              {t.is_active && <span className="w-2 h-2 bg-green-400 rounded-full"></span>}
-            </button>
-          ))}
+        <div className="flex justify-center mb-6">
+          <select
+            value={selectedTournament?.id || ''}
+            onChange={(e) => {
+              const t = tournaments.find(t => t.id.toString() === e.target.value);
+              if (t) selectTournament(t);
+            }}
+            className="bg-gray-800 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-primary-500 min-w-[200px]"
+          >
+            <option value="" disabled>Sélectionner un tournoi</option>
+            {tournaments.map(t => (
+              <option key={t.id} value={t.id}>{t.name}{t.is_active ? ' ●' : ''}</option>
+            ))}
+          </select>
         </div>
 
         {tournaments.length === 0 && (
