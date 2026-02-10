@@ -1,61 +1,152 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flag, Search, Trophy, ChevronRight } from 'lucide-react';
-import { tournamentsAPI } from '../api';
+import { ArrowLeft, Calendar, Clock, Check, AlertCircle, Flag } from 'lucide-react';
+import { teamsAPI, matchesAPI, predictionsAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
-const TeamsPage = () => {
-  const [tournaments, setTournaments] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState(null);
-  const [tournamentTeams, setTournamentTeams] = useState([]);
+const TeamPage = () => {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const [team, setTeam] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [predictions, setPredictions] = useState({});
+  const [predictionInputs, setPredictionInputs] = useState({});
   const [loading, setLoading] = useState(true);
-  const [teamsLoading, setTeamsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const res = await tournamentsAPI.getAll();
-        const list = res.data || [];
-        setTournaments(list);
-        // Auto-select first active tournament
-        const active = list.find(t => t.is_active) || list[0];
-        if (active) selectTournament(active);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
-    fetchTournaments();
-  }, []);
+    fetchData();
+  }, [id, user]);
 
-  const selectTournament = async (tournament) => {
-    setSelectedTournament(tournament);
-    setTeamsLoading(true);
-    setSearchTerm('');
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await tournamentsAPI.getTeams(tournament.id);
-      setTournamentTeams(res.data || []);
-    } catch (e) { console.error(e); setTournamentTeams([]); }
-    finally { setTeamsLoading(false); }
+      const teamRes = await teamsAPI.getById(id);
+      setTeam(teamRes.data);
+      
+      // Fetch visible matches and filter for this team
+      try {
+        const matchesRes = await matchesAPI.getVisible();
+        const allMatches = matchesRes.data || [];
+        const teamMatches = allMatches.filter(m => 
+          m.team1_id === parseInt(id) || m.team2_id === parseInt(id)
+        );
+        teamMatches.sort((a, b) => {
+          // Live first, then upcoming, then completed
+          const order = { live: 0, upcoming: 1, completed: 2 };
+          if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+          return new Date(a.match_date) - new Date(b.match_date);
+        });
+        setMatches(teamMatches);
+      } catch (e) {
+        console.error('Error fetching matches:', e);
+        setMatches([]);
+      }
+
+      if (user) {
+        try {
+          const predRes = await predictionsAPI.getMyPredictions();
+          const predMap = {};
+          (predRes.data || []).forEach(p => { predMap[p.match_id] = p; });
+          setPredictions(predMap);
+        } catch (e) {}
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Équipe non trouvée');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const renderFlag = (flagUrl, name) => {
-    if (!flagUrl) return <span className="text-2xl">🏳️</span>;
-    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http'))
-      return <img src={flagUrl} alt={name} className="w-10 h-7 object-cover rounded" />;
-    return <span className="text-2xl">{flagUrl}</span>;
+  const renderFlag = (flagUrl, name, size = 'md') => {
+    const sizeClass = size === 'lg' ? 'w-20 h-14' : size === 'sm' ? 'w-8 h-6' : 'w-12 h-8';
+    const textSize = size === 'lg' ? 'text-5xl' : size === 'sm' ? 'text-2xl' : 'text-3xl';
+    
+    if (!flagUrl) return <span className={textSize}>🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) {
+      return <img src={flagUrl} alt={name} className={`${sizeClass} object-cover rounded`} />;
+    }
+    return <span className={textSize}>{flagUrl}</span>;
   };
 
-  // Group teams by group_name
-  const filtered = tournamentTeams.filter(t =>
-    !searchTerm || t.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const groups = {};
-  filtered.forEach(t => {
-    const g = t.group_name || 'Autres';
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(t);
+  const canPredictMatch = (match) => {
+    if (match.status === 'completed' || match.status === 'live') return false;
+    return new Date() < new Date(match.match_date);
+  };
+
+  const isWithin24Hours = (matchDate) => {
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diffMs = match.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffMs > 0 && diffHours <= 24;
+  };
+
+  const getTimeRemaining = (matchDate) => {
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diffMs = match.getTime() - now.getTime();
+    if (diffMs <= 0) return null;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours >= 24) return `${Math.floor(hours / 24)}j ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  const handlePredictionChange = (matchId, field, value) => {
+    setPredictionInputs(prev => ({
+      ...prev,
+      [matchId]: { ...prev[matchId], [field]: parseInt(value) || 0 }
+    }));
+  };
+
+  const submitPrediction = async (matchId) => {
+    if (!user) {
+      toast.error('Connectez-vous pour pronostiquer');
+      return;
+    }
+    const input = predictionInputs[matchId];
+    if (!input || input.team1_score === undefined || input.team2_score === undefined) {
+      toast.error('Entrez les deux scores');
+      return;
+    }
+    try {
+      await predictionsAPI.makePrediction({
+        match_id: matchId,
+        team1_score: input.team1_score,
+        team2_score: input.team2_score
+      });
+      toast.success('Pronostic enregistré !');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erreur');
+    }
+  };
+
+  // Calculate stats
+  const completedMatches = matches.filter(m => m.status === 'completed');
+  const liveMatches = matches.filter(m => m.status === 'live');
+  const upcomingMatches = matches.filter(m => m.status === 'upcoming');
+
+  const stats = { played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+  completedMatches.forEach(m => {
+    const isTeam1 = m.team1_id === parseInt(id);
+    const teamScore = isTeam1 ? m.team1_score : m.team2_score;
+    const oppScore = isTeam1 ? m.team2_score : m.team1_score;
+    stats.played++;
+    stats.goalsFor += teamScore || 0;
+    stats.goalsAgainst += oppScore || 0;
+    if (teamScore > oppScore) stats.wins++;
+    else if (teamScore === oppScore) stats.draws++;
+    else stats.losses++;
   });
-  const sortedGroups = Object.keys(groups).sort();
 
   if (loading) {
     return (
@@ -65,134 +156,231 @@ const TeamsPage = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen pt-20 px-4 pb-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="font-display text-4xl gradient-text">Équipes</h1>
-          <p className="text-gray-400 mt-2">Sélectionnez un tournoi pour voir ses équipes</p>
-        </div>
-
-        {/* Tournament Selector */}
-        <div className="flex flex-wrap gap-3 mb-6 justify-center">
-          {tournaments.map(t => (
-            <button
-              key={t.id}
-              onClick={() => selectTournament(t)}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border ${
-                selectedTournament?.id === t.id
-                  ? 'bg-primary-500/20 border-primary-500/50 text-primary-400'
-                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {t.logo_url ? (
-                <img src={t.logo_url} alt={t.name} className="w-6 h-6 rounded object-cover" />
-              ) : (
-                <Trophy className="w-4 h-4" />
-              )}
-              <span>{t.name}</span>
-              {t.is_active && <span className="w-2 h-2 bg-green-400 rounded-full"></span>}
-            </button>
-          ))}
-        </div>
-
-        {tournaments.length === 0 && (
+  if (error || !team) {
+    return (
+      <div className="min-h-screen pt-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <Link to="/equipes" className="inline-flex items-center space-x-2 text-gray-400 hover:text-white mb-6">
+            <ArrowLeft className="w-5 h-5" />
+            <span>Retour</span>
+          </Link>
           <div className="card text-center py-12">
-            <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Aucun tournoi disponible</p>
+            <Flag className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">{error || 'Équipe non trouvée'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const MatchCard = ({ match }) => {
+    const isLive = match.status === 'live';
+    const isCompleted = match.status === 'completed';
+    const canPredict = canPredictMatch(match);
+    const existingPred = predictions[match.id];
+    const input = predictionInputs[match.id] || {
+      team1_score: existingPred?.team1_score ?? '',
+      team2_score: existingPred?.team2_score ?? ''
+    };
+    const within24h = !isLive && !isCompleted && isWithin24Hours(match.match_date);
+
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        className={`card ${isLive ? 'border-red-500/50 bg-red-500/5' : ''} ${within24h ? 'border-orange-500/30 bg-orange-500/5' : ''} ${isCompleted ? 'opacity-80' : ''}`}
+      >
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center space-x-2">
+            {match.tournament_name && (
+              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">{match.tournament_name}</span>
+            )}
+            {match.stage && (
+              <span className="text-xs bg-white/10 text-gray-400 px-2 py-1 rounded-full">{match.stage}</span>
+            )}
+          </div>
+          {isLive && (
+            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full animate-pulse">🔴 En cours</span>
+          )}
+          {isCompleted && (
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Terminé</span>
+          )}
+          {!isLive && !isCompleted && (
+            <span className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${within24h ? 'bg-orange-500/20 text-orange-400 animate-pulse' : 'bg-blue-500/20 text-blue-400'}`}>
+              <Clock className="w-3 h-3" />
+              <span>{getTimeRemaining(match.match_date)}</span>
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex-1 flex flex-col items-center">
+            {renderFlag(match.team1_flag, match.team1_name, 'sm')}
+            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team1_name}</p>
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center">
+            {isLive || isCompleted ? (
+              <div className={`text-2xl font-bold ${isLive ? 'text-red-400' : 'text-white'}`}>
+                {match.team1_score ?? 0} - {match.team2_score ?? 0}
+              </div>
+            ) : canPredict && user ? (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={input.team1_score}
+                  onChange={(e) => handlePredictionChange(match.id, 'team1_score', e.target.value)}
+                  className={`w-12 bg-gray-700 border rounded-lg py-2 text-white text-center ${within24h ? 'border-orange-500/50' : 'border-gray-600'}`}
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={input.team2_score}
+                  onChange={(e) => handlePredictionChange(match.id, 'team2_score', e.target.value)}
+                  className={`w-12 bg-gray-700 border rounded-lg py-2 text-white text-center ${within24h ? 'border-orange-500/50' : 'border-gray-600'}`}
+                />
+              </div>
+            ) : existingPred ? (
+              <span className="text-lg font-bold text-gray-400">{existingPred.team1_score} - {existingPred.team2_score}</span>
+            ) : (
+              <span className="text-gray-500">VS</span>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              {new Date(match.match_date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center">
+            {renderFlag(match.team2_flag, match.team2_name, 'sm')}
+            <p className="text-white font-semibold mt-2 text-sm text-center">{match.team2_name}</p>
+          </div>
+        </div>
+
+        {canPredict && user && !isCompleted && !isLive && (
+          <div className="mt-4 flex justify-center">
+            <button 
+              onClick={() => submitPrediction(match.id)} 
+              className={`text-sm px-6 py-2 rounded-lg font-medium transition-colors ${within24h ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'btn-primary'}`}
+            >
+              {existingPred ? 'Modifier' : 'Valider'}
+            </button>
           </div>
         )}
 
-        {selectedTournament && (
-          <>
-            {/* Tournament Info Bar */}
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary-500/10 to-accent-500/10 border border-primary-500/20 rounded-xl mb-6">
-              <div className="flex items-center space-x-3">
-                {selectedTournament.logo_url ? (
-                  <img src={selectedTournament.logo_url} alt={selectedTournament.name} className="w-10 h-10 rounded-lg object-cover" />
-                ) : (
-                  <Trophy className="w-8 h-8 text-yellow-500" />
-                )}
-                <div>
-                  <h2 className="text-lg font-bold text-white">{selectedTournament.name}</h2>
-                  <p className="text-xs text-gray-400">{tournamentTeams.length} équipes • {sortedGroups.length} groupe{sortedGroups.length > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-              <Link
-                to={`/tournois/${selectedTournament.id}`}
-                className="text-primary-400 hover:text-primary-300 text-sm flex items-center"
-              >
-                Voir tournoi <ChevronRight className="w-4 h-4 ml-1" />
-              </Link>
+        {existingPred && (
+          <p className="text-center text-xs text-green-400 mt-2">
+            ✓ Votre prono: {existingPred.team1_score} - {existingPred.team2_score}
+            {existingPred.points_earned > 0 && <span> (+{existingPred.points_earned} pts)</span>}
+          </p>
+        )}
+
+        {!user && canPredict && !isCompleted && !isLive && (
+          <p className="text-center text-xs text-yellow-400 mt-4">
+            <AlertCircle className="w-4 h-4 inline mr-1" />
+            Connectez-vous pour pronostiquer
+          </p>
+        )}
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen pt-20 px-4 pb-8">
+      <div className="max-w-4xl mx-auto">
+        <Link to="/equipes" className="inline-flex items-center space-x-2 text-gray-400 hover:text-white mb-6">
+          <ArrowLeft className="w-5 h-5" />
+          <span>Retour aux équipes</span>
+        </Link>
+
+        {/* Team Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card mb-8">
+          <div className="flex items-center space-x-6">
+            {renderFlag(team.flag_url, team.name, 'lg')}
+            <div>
+              <h1 className="text-3xl font-bold text-white">{team.name}</h1>
+              {team.code && <p className="text-gray-400">{team.code}</p>}
             </div>
+          </div>
 
-            {/* Search */}
-            {tournamentTeams.length > 0 && (
-              <div className="relative mb-6 max-w-md mx-auto">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Rechercher une équipe..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
-                />
+          {stats.played > 0 && (
+            <div className="grid grid-cols-5 gap-4 mt-6 pt-6 border-t border-white/10">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{stats.played}</p>
+                <p className="text-xs text-gray-400">Joués</p>
               </div>
-            )}
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-400">{stats.wins}</p>
+                <p className="text-xs text-gray-400">Victoires</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-yellow-400">{stats.draws}</p>
+                <p className="text-xs text-gray-400">Nuls</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-400">{stats.losses}</p>
+                <p className="text-xs text-gray-400">Défaites</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{stats.goalsFor}-{stats.goalsAgainst}</p>
+                <p className="text-xs text-gray-400">Buts</p>
+              </div>
+            </div>
+          )}
+        </motion.div>
 
-            {/* Teams Grid */}
-            {teamsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div>
-              </div>
-            ) : tournamentTeams.length === 0 ? (
-              <div className="card text-center py-12">
-                <Flag className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucune équipe dans ce tournoi</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="card text-center py-12">
-                <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucune équipe trouvée pour "{searchTerm}"</p>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {sortedGroups.map((groupName, gIndex) => (
-                  <motion.div
-                    key={groupName}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: gIndex * 0.05 }}
-                    className="card"
-                  >
-                    <h3 className="text-sm font-bold text-primary-400 mb-3 border-b border-white/10 pb-2">
-                      {groupName === 'Autres' ? 'Autres' : `Groupe ${groupName}`}
-                    </h3>
-                    <div className="space-y-2">
-                      {groups[groupName].map(team => (
-                        <Link
-                          key={team.team_id || team.id}
-                          to={`/equipe/${team.team_id || team.id}`}
-                          className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/5 transition-all group"
-                        >
-                          {renderFlag(team.flag_url, team.name)}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors truncate">{team.name}</p>
-                            {team.code && <p className="text-xs text-gray-500">{team.code}</p>}
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-primary-400 transition-colors" />
-                        </Link>
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </>
+        {/* Live Matches */}
+        {liveMatches.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+              <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+              <span>En cours</span>
+            </h2>
+            <div className="space-y-4">
+              {liveMatches.map(match => <MatchCard key={match.id} match={match} />)}
+            </div>
+          </section>
+        )}
+
+        {/* Upcoming Matches */}
+        {upcomingMatches.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+              <span className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
+              <span>À venir</span>
+            </h2>
+            <div className="space-y-4">
+              {upcomingMatches.map(match => <MatchCard key={match.id} match={match} />)}
+            </div>
+          </section>
+        )}
+
+        {/* Completed Matches */}
+        {completedMatches.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+              <Check className="w-5 h-5 text-green-400" />
+              <span>Terminés</span>
+            </h2>
+            <div className="space-y-4">
+              {completedMatches.map(match => <MatchCard key={match.id} match={match} />)}
+            </div>
+          </section>
+        )}
+
+        {liveMatches.length === 0 && upcomingMatches.length === 0 && completedMatches.length === 0 && (
+          <div className="card text-center py-12">
+            <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">Aucun match disponible</p>
+            <p className="text-gray-500 text-sm mt-2">Les matchs apparaissent 24h avant</p>
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-export default TeamsPage;
+export default TeamPage;
