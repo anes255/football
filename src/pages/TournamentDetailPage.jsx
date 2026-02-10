@@ -19,7 +19,7 @@ const TournamentDetailPage = () => {
   const [selectedWinner, setSelectedWinner] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('matches');
-  const [tournamentStarted, setTournamentStarted] = useState(true);
+  const [tournamentStarted, setTournamentStarted] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -65,7 +65,8 @@ const TournamentDetailPage = () => {
         setTournamentStarted(startedData.started);
       } catch (e) {
         console.error('Error checking tournament started:', e);
-        setTournamentStarted(true);
+        // Fallback: use tournament data
+        setTournamentStarted(tourRes.data?.has_started || false);
       }
 
       if (user) {
@@ -215,17 +216,17 @@ const TournamentDetailPage = () => {
                 </div>
               </div>
 
-              <div className="flex space-x-4 border-b border-white/10">
+              <div className="flex space-x-4 border-b border-white/10 overflow-x-auto -mx-2 px-2" style={{scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}}>
                 <button
                   onClick={() => setActiveTab('matches')}
-                  className={`pb-3 px-2 transition-colors ${activeTab === 'matches' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'matches' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                 >
                   Matchs
                 </button>
                 {tournamentTeams.length > 0 && (
                   <button
                     onClick={() => setActiveTab('teams')}
-                    className={`pb-3 px-2 transition-colors ${activeTab === 'teams' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                    className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'teams' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                   >
                     Équipes
                   </button>
@@ -233,7 +234,7 @@ const TournamentDetailPage = () => {
                 {user && (
                   <button
                     onClick={() => setActiveTab('winner')}
-                    className={`pb-3 px-2 transition-colors ${activeTab === 'winner' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                    className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'winner' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                   >
                     Vainqueur
                   </button>
@@ -241,7 +242,7 @@ const TournamentDetailPage = () => {
                 {user && (
                   <button
                     onClick={() => setActiveTab('players')}
-                    className={`pb-3 px-2 transition-colors ${activeTab === 'players' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
+                    className={`pb-3 px-2 transition-colors whitespace-nowrap ${activeTab === 'players' ? 'text-primary-400 border-b-2 border-primary-400' : 'text-gray-400 hover:text-white'}`}
                   >
                     Joueurs
                   </button>
