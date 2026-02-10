@@ -14,7 +14,7 @@ const AdminTournaments = () => {
   const [showWinnerModal, setShowWinnerModal] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32
+    name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32, enable_player_predictions: false
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -43,7 +43,7 @@ const AdminTournaments = () => {
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32 });
+      setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32, enable_player_predictions: false });
       fetchData();
     } catch (error) { toast.error('Erreur'); }
   };
@@ -57,7 +57,8 @@ const AdminTournaments = () => {
       logo_url: tournament.logo_url || '',
       is_active: tournament.is_active,
       format: tournament.format || 'groups_4',
-      max_teams: tournament.max_teams || 32
+      max_teams: tournament.max_teams || 32,
+      enable_player_predictions: tournament.enable_player_predictions || false
     });
     setEditingId(tournament.id);
     setShowForm(true);
@@ -103,7 +104,7 @@ const AdminTournaments = () => {
         <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
           <Trophy className="w-8 h-8 text-yellow-500" /><span>Tournois</span>
         </h1>
-        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32 }); }} className="btn-primary flex items-center space-x-2">
+        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32, enable_player_predictions: false }); }} className="btn-primary flex items-center space-x-2">
           <Plus className="w-5 h-5" /><span>Nouveau</span>
         </button>
       </div>
@@ -145,9 +146,15 @@ const AdminTournaments = () => {
               <label className="block text-sm text-gray-400 mb-1">Logo URL</label>
               <input type="text" value={formData.logo_url} onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" />
             </div>
-            <div className="flex items-center space-x-2">
-              <input type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} className="w-4 h-4" />
-              <label className="text-gray-400">Actif</label>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <input type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} className="w-4 h-4" />
+                <label className="text-gray-400">Actif</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input type="checkbox" checked={formData.enable_player_predictions} onChange={(e) => setFormData({ ...formData, enable_player_predictions: e.target.checked })} className="w-4 h-4" />
+                <label className="text-gray-400">Activer prédictions joueurs (meilleur joueur / buteur)</label>
+              </div>
             </div>
             <div className="flex space-x-3">
               <button type="submit" className="btn-primary">{editingId ? 'Modifier' : 'Créer'}</button>
