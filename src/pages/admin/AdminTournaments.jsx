@@ -14,7 +14,7 @@ const AdminTournaments = () => {
   const [showWinnerModal, setShowWinnerModal] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4'
+    name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -27,11 +27,8 @@ const AdminTournaments = () => {
       setTournaments(tourRes.data);
       setTeams(teamsRes.data);
       setFormats(formatsRes.data);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('Error:', error); }
+    finally { setLoading(false); }
   };
 
   const handleSubmit = async (e) => {
@@ -46,11 +43,9 @@ const AdminTournaments = () => {
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4' });
+      setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32 });
       fetchData();
-    } catch (error) {
-      toast.error('Erreur');
-    }
+    } catch (error) { toast.error('Erreur'); }
   };
 
   const handleEdit = (tournament) => {
@@ -61,24 +56,29 @@ const AdminTournaments = () => {
       end_date: tournament.end_date?.split('T')[0] || '',
       logo_url: tournament.logo_url || '',
       is_active: tournament.is_active,
-      format: tournament.format || 'groups_4'
+      format: tournament.format || 'groups_4',
+      max_teams: tournament.max_teams || 32
     });
     setEditingId(tournament.id);
     setShowForm(true);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Supprimer ce tournoi ?')) return;
+    if (!confirm('Supprimer ce tournoi et toutes ses données (matchs, pronostics, joueurs) ?')) return;
     try {
       await tournamentsAPI.delete(id);
       toast.success('Tournoi supprimé');
       fetchData();
-    } catch (error) {
-      toast.error('Erreur');
-    }
+    } catch (error) { toast.error('Erreur'); }
   };
 
   const getFormatLabel = (format) => formats.find(f => f.value === format)?.label || format;
+
+  const renderFlag = (flagUrl, name) => {
+    if (!flagUrl) return <span className="text-lg">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
+    return <span className="text-lg">{flagUrl}</span>;
+  };
 
   if (loading) return <div className="flex items-center justify-center p-12"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div></div>;
 
@@ -86,10 +86,9 @@ const AdminTournaments = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
-          <Trophy className="w-8 h-8 text-yellow-500" />
-          <span>Tournois</span>
+          <Trophy className="w-8 h-8 text-yellow-500" /><span>Tournois</span>
         </h1>
-        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4' }); }} className="btn-primary flex items-center space-x-2">
+        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32 }); }} className="btn-primary flex items-center space-x-2">
           <Plus className="w-5 h-5" /><span>Nouveau</span>
         </button>
       </div>
@@ -108,6 +107,11 @@ const AdminTournaments = () => {
                 <select value={formData.format} onChange={(e) => setFormData({ ...formData, format: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white">
                   {formats.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Nombre d'équipes</label>
+                <input type="number" min="2" max="64" value={formData.max_teams} onChange={(e) => setFormData({ ...formData, max_teams: parseInt(e.target.value) || 32 })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" />
+                <p className="text-xs text-gray-500 mt-1">Ex: 8, 10, 12, 16, 24, 32</p>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Date début</label>
@@ -157,29 +161,31 @@ const AdminTournaments = () => {
                 )}
                 <div>
                   <h3 className="text-lg font-bold text-white">{tournament.name}</h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-400">
+                  <div className="flex items-center space-x-3 text-sm text-gray-400">
                     <span>{getFormatLabel(tournament.format)}</span>
                     <span>•</span>
-                    <span>{tournament.match_count || 0} matchs</span>
+                    <span>{tournament.max_teams || 32} équipes max</span>
                     <span>•</span>
-                    <span>{tournament.team_count || 0} équipes</span>
+                    <span>{tournament.team_count || 0} assignées</span>
+                    <span>•</span>
+                    <span>{tournament.match_count || 0} matchs</span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${tournament.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                    {tournament.is_active ? 'Actif' : 'Inactif'}
-                  </span>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <button onClick={() => setShowWinnerModal(tournament)} className="p-2 hover:bg-yellow-500/20 text-yellow-400 rounded-lg" title="Déclarer le vainqueur">
-                  <Crown className="w-5 h-5" />
-                </button>
-                <button onClick={() => setShowGroupsModal(tournament)} className="p-2 hover:bg-blue-500/20 text-blue-400 rounded-lg" title="Gérer les groupes">
+                <span className={`text-xs px-2 py-1 rounded-full ${tournament.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                  {tournament.is_active ? 'Actif' : 'Inactif'}
+                </span>
+                <button onClick={() => setShowGroupsModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-blue-400" title="Gérer groupes">
                   <Users className="w-5 h-5" />
                 </button>
-                <button onClick={() => handleEdit(tournament)} className="p-2 hover:bg-white/10 text-gray-400 rounded-lg">
+                <button onClick={() => setShowWinnerModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-yellow-400" title="Déclarer vainqueur">
+                  <Crown className="w-5 h-5" />
+                </button>
+                <button onClick={() => handleEdit(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
                   <Edit className="w-5 h-5" />
                 </button>
-                <button onClick={() => handleDelete(tournament.id)} className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg">
+                <button onClick={() => handleDelete(tournament.id)} className="p-2 hover:bg-white/10 rounded-lg text-red-400">
                   <Trash2 className="w-5 h-5" />
                 </button>
               </div>
@@ -189,7 +195,7 @@ const AdminTournaments = () => {
       </div>
 
       {showGroupsModal && <GroupsModal tournament={showGroupsModal} teams={teams} formats={formats} onClose={() => { setShowGroupsModal(null); fetchData(); }} />}
-      {showWinnerModal && <WinnerModal tournament={showWinnerModal} teams={teams} onClose={() => { setShowWinnerModal(null); fetchData(); }} />}
+      {showWinnerModal && <WinnerModal tournament={showWinnerModal} teams={teams} onClose={() => setShowWinnerModal(null)} />}
     </div>
   );
 };
@@ -197,55 +203,53 @@ const AdminTournaments = () => {
 const WinnerModal = ({ tournament, teams, onClose }) => {
   const [tournamentTeams, setTournamentTeams] = useState([]);
   const [selectedWinner, setSelectedWinner] = useState('');
-  const [loading, setLoading] = useState(true);
   const [awarding, setAwarding] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchTeams(); }, []);
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const res = await adminAPI.getTournamentTeams(tournament.id);
+        setTournamentTeams(res.data || []);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    fetch();
+  }, []);
 
-  const fetchTeams = async () => {
-    try {
-      const res = await adminAPI.getTournamentTeams(tournament.id);
-      setTournamentTeams(res.data || []);
-    } catch (error) { console.error('Error:', error); }
-    finally { setLoading(false); }
+  const renderFlag = (flagUrl, name) => {
+    if (!flagUrl) return <span className="text-lg">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
+    return <span className="text-lg">{flagUrl}</span>;
   };
 
   const handleAwardWinner = async () => {
-    if (!selectedWinner) { toast.error('Sélectionnez une équipe'); return; }
-    if (!confirm('Déclarer ce vainqueur et attribuer les points bonus ?')) return;
     setAwarding(true);
     try {
       const res = await adminAPI.awardTournamentWinner({ tournament_id: tournament.id, team_id: parseInt(selectedWinner) });
-      toast.success(res.data.message || 'Vainqueur déclaré !');
+      toast.success(res.data.message);
       onClose();
-    } catch (error) { toast.error('Erreur'); }
+    } catch (e) { toast.error('Erreur'); }
     finally { setAwarding(false); }
   };
 
-  const renderFlag = (flagUrl, name) => {
-    if (!flagUrl) return <span className="text-2xl">🏳️</span>;
-    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) return <img src={flagUrl} alt={name} className="w-8 h-6 object-cover rounded" />;
-    return <span className="text-2xl">{flagUrl}</span>;
-  };
-
-  const availableTeams = tournamentTeams.length > 0 ? tournamentTeams.map(tt => ({ id: tt.team_id, name: tt.name, flag_url: tt.flag_url })) : teams;
+  const availableTeams = tournamentTeams.map(tt => {
+    const team = teams.find(t => t.id === tt.team_id) || tt;
+    return { ...team, id: tt.team_id };
+  });
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gray-800 rounded-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gray-800 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-white/10 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg"><Crown className="w-6 h-6 text-yellow-400" /></div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Déclarer le vainqueur</h2>
-              <p className="text-gray-400 text-sm">{tournament.name}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-6 h-6 text-gray-400" /></button>
+          <h2 className="text-xl font-bold text-white">Vainqueur - {tournament.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5 text-gray-400" /></button>
         </div>
         <div className="p-6">
           {loading ? (
             <div className="text-center py-8"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div></div>
+          ) : availableTeams.length === 0 ? (
+            <p className="text-gray-400 text-center py-8">Aucune équipe dans ce tournoi</p>
           ) : (
             <>
               <div className="mb-6">
@@ -281,8 +285,9 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
   const [saving, setSaving] = useState(false);
 
   const format = formats.find(f => f.value === tournament.format);
-  const numGroups = format?.groups || 4;
-  const groupLetters = 'ABCDEFGH'.split('').slice(0, numGroups);
+  // Use tournament.max_teams to determine number of groups if format is custom
+  const numGroups = format?.groups || Math.ceil((tournament.max_teams || 32) / 4);
+  const groupLetters = 'ABCDEFGHIJKLMNOP'.split('').slice(0, numGroups);
 
   useEffect(() => { fetchTeams(); }, []);
 
@@ -314,24 +319,15 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
   const saveGroups = async () => {
     setSaving(true);
     try {
-      // Build teams data - NO position field
-      const teamsData = tournamentTeams
-        .filter(t => t.team_id && t.group_name)
-        .map(t => ({ teamId: parseInt(t.team_id), groupName: t.group_name }));
-      
-      if (teamsData.length === 0) {
-        toast.error('Aucune équipe à sauvegarder');
-        setSaving(false);
-        return;
-      }
-      
+      const teamsData = tournamentTeams.filter(t => t.team_id && t.group_name).map(t => ({ teamId: parseInt(t.team_id), groupName: t.group_name }));
+      if (teamsData.length === 0) { toast.error('Aucune équipe à sauvegarder'); setSaving(false); return; }
+      // Check max_teams
+      if (teamsData.length > (tournament.max_teams || 32)) { toast.error(`Maximum ${tournament.max_teams || 32} équipes pour ce tournoi`); setSaving(false); return; }
       await adminAPI.bulkAddTournamentTeams(tournament.id, { teams: teamsData });
       toast.success(`${teamsData.length} équipes sauvegardées`);
       onClose();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error(error.response?.data?.error || 'Erreur lors de la sauvegarde');
-    } finally { setSaving(false); }
+    } catch (error) { toast.error(error.response?.data?.error || 'Erreur'); }
+    finally { setSaving(false); }
   };
 
   const renderFlag = (flagUrl, name) => {
@@ -346,7 +342,7 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
         <div className="p-6 border-b border-white/10 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-white">Groupes - {tournament.name}</h2>
-            <p className="text-gray-400 text-sm">{format?.label} • {tournamentTeams.length} équipes sélectionnées</p>
+            <p className="text-gray-400 text-sm">{format?.label || tournament.format} • {tournamentTeams.length}/{tournament.max_teams || 32} équipes</p>
           </div>
           <div className="flex items-center space-x-3">
             <button onClick={saveGroups} disabled={saving} className="btn-primary flex items-center space-x-2">
@@ -381,7 +377,7 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
                   );
                 })}
               </div>
-              <h3 className="font-bold text-white mb-4">Assigner les équipes aux groupes</h3>
+              <h3 className="font-bold text-white mb-4">Assigner les équipes ({tournamentTeams.length}/{tournament.max_teams || 32})</h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teams.map(team => (
                   <div key={team.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
