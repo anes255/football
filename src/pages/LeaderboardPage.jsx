@@ -67,22 +67,17 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Tournament Filter */}
-        <div className="flex flex-wrap gap-2 mb-6 justify-center">
-          <button
-            onClick={() => setSelectedTournament('all')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTournament === 'all' ? 'bg-primary-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+        <div className="flex justify-center mb-6">
+          <select
+            value={selectedTournament}
+            onChange={(e) => setSelectedTournament(e.target.value)}
+            className="bg-gray-800 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-primary-500 min-w-[200px]"
           >
-            Tous
-          </button>
-          {tournaments.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setSelectedTournament(t.id.toString())}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTournament === t.id.toString() ? 'bg-primary-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-            >
-              {t.name}
-            </button>
-          ))}
+            <option value="all">Tous les tournois</option>
+            {tournaments.map(t => (
+              <option key={t.id} value={t.id.toString()}>{t.name}</option>
+            ))}
+          </select>
         </div>
 
         {loading ? (
