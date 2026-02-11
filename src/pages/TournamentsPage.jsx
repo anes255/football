@@ -74,21 +74,15 @@ const TournamentsPage = () => {
               className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
             />
           </div>
-          <div className="flex space-x-2">
-            {['all', 'active', 'inactive'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  filter === f
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                {f === 'all' ? 'Tous' : f === 'active' ? 'Actifs' : 'Terminés'}
-              </button>
-            ))}
-          </div>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="bg-gray-800 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-primary-500"
+          >
+            <option value="all">Tous</option>
+            <option value="active">Actifs</option>
+            <option value="inactive">Terminés</option>
+          </select>
         </div>
 
         {/* Active Tournaments */}
