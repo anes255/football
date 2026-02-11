@@ -98,6 +98,10 @@ export const leaderboardAPI = {
   getByTournament: (id) => api.get(`/leaderboard/tournament/${id}`),
 };
 
+export const dailyWinnersAPI = {
+  get: (date) => api.get('/daily-winners' + (date ? `?date=${date}` : '')),
+};
+
 export const settingsAPI = {
   get: () => api.get('/settings'),
 };
