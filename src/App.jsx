@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 // Layout
 import Navbar from './components/Navbar';
@@ -16,6 +17,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import ProfilePage from './pages/ProfilePage';
 import TeamsPage from './pages/TeamsPage';
 import TeamPage from './pages/TeamPage';
+import DailyWinnersPage from './pages/DailyWinnersPage';
 
 // Admin Pages
 import AdminLayout from './components/AdminLayout';
@@ -56,6 +58,7 @@ function AppContent() {
         <Route path="/equipes" element={<TeamsPage />} />
         <Route path="/equipes/:id" element={<TeamPage />} />
         <Route path="/classement" element={<LeaderboardPage />} />
+        <Route path="/gagnants-du-jour" element={<DailyWinnersPage />} />
         <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
         {/* Admin Routes */}
@@ -81,7 +84,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <SettingsProvider>
+          <AppContent />
+        </SettingsProvider>
       </AuthProvider>
     </Router>
   );
