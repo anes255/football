@@ -154,35 +154,32 @@ const AdminTeams = () => {
         <h2 className="text-lg font-bold text-white mb-3 flex items-center space-x-2">
           <Trophy className="w-5 h-5 text-yellow-500" /><span>Sélectionner un tournoi</span>
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <select
+          value={selectedTournament?.id || ''}
+          onChange={(e) => {
+            const t = tournaments.find(t => t.id.toString() === e.target.value);
+            if (t) handleSelectTournament(t);
+          }}
+          className="w-full bg-gray-700 border border-gray-600 rounded-xl py-2.5 px-4 text-white text-sm focus:outline-none focus:border-primary-500"
+        >
+          <option value="" disabled>Choisir un tournoi</option>
           {tournaments.map(t => (
-            <button
-              key={t.id}
-              onClick={() => handleSelectTournament(t)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-                selectedTournament?.id === t.id
-                  ? 'bg-primary-500/20 border-primary-500/50 text-primary-400'
-                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-              }`}
-            >
-              <span>{t.name}</span>
-              <span className="text-xs opacity-60">({t.team_count || 0})</span>
-            </button>
+            <option key={t.id} value={t.id}>{t.name} ({t.team_count || 0} équipes)</option>
           ))}
-          {tournaments.length === 0 && <p className="text-gray-400 text-sm">Créez d'abord un tournoi</p>}
-        </div>
+        </select>
+        {tournaments.length === 0 && <p className="text-gray-400 text-sm mt-2">Créez d'abord un tournoi</p>}
       </div>
 
       {/* Tabs */}
       {selectedTournament && (
-        <div className="flex space-x-1 bg-white/5 p-1 rounded-xl">
-          <button onClick={() => setTab('groups')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'groups' ? 'bg-primary-500 text-white' : 'text-gray-400 hover:text-white'}`}>
-            <Users className="w-4 h-4 inline mr-2" />Groupes & Assignation
-          </button>
-          <button onClick={() => setTab('all')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'all' ? 'bg-primary-500 text-white' : 'text-gray-400 hover:text-white'}`}>
-            <Flag className="w-4 h-4 inline mr-2" />Toutes les équipes ({teams.length})
-          </button>
-        </div>
+        <select
+          value={tab}
+          onChange={(e) => setTab(e.target.value)}
+          className="w-full bg-gray-700 border border-gray-600 rounded-xl py-2.5 px-4 text-white text-sm focus:outline-none focus:border-primary-500"
+        >
+          <option value="groups">Groupes & Assignation</option>
+          <option value="all">Toutes les équipes ({teams.length})</option>
+        </select>
       )}
 
       {/* Groups Tab */}
