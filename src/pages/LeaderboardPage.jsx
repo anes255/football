@@ -161,7 +161,18 @@ const LeaderboardPage = () => {
                             <span>{player.name}</span>
                             {user && player.id === user.id && <span className="text-xs text-primary-400">(Vous)</span>}
                           </p>
-                          <p className="text-xs text-gray-400">{player.total_predictions || 0} pronostics</p>
+                          <p className="text-xs text-gray-400">
+                            {player.total_predictions || 0} pronos
+                            {player.correct_predictions !== undefined && (
+                              <> · <span className="text-green-400">{player.correct_predictions} correct{player.correct_predictions !== 1 ? 's' : ''}</span></>
+                            )}
+                            {player.exact_predictions > 0 && (
+                              <> · <span className="text-emerald-400">⭐{player.exact_predictions} exact</span></>
+                            )}
+                            {player.completed_predictions > 0 && (
+                              <> · {((player.correct_predictions / player.completed_predictions) * 100).toFixed(0)}%</>
+                            )}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -180,7 +191,7 @@ const LeaderboardPage = () => {
       </div>
 
       {selectedUser && (
-        <UserPredictionsModal userId={selectedUser.id} userName={selectedUser.name} onClose={() => setSelectedUser(null)} />
+        <UserPredictionsModal userId={selectedUser.id} userName={selectedUser.name} onClose={() => setSelectedUser(null)} tournamentFilter={selectedTournament} />
       )}
     </div>
   );
