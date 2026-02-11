@@ -2,49 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary: #f9ad00;
+  --color-accent: #ff6b00;
+  --color-secondary: #22c55e;
+  --color-bg: #0f172a;
+  --color-bg-2: #1e293b;
+  --color-card: rgba(255, 255, 255, 0.05);
+  --color-card-border: rgba(255, 255, 255, 0.1);
+  --color-navbar-bg: rgba(15, 23, 42, 0.95);
+  --color-navbar-text: #ffffff;
+  --color-text: #ffffff;
+  --color-text-muted: #9ca3af;
+  --color-gradient-start: #f9ad00;
+  --color-gradient-end: #ff6b00;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-live: #ef4444;
+  --color-scrollbar-thumb: #f9ad00;
+  --color-scrollbar-track: #1e293b;
+  --color-btn-primary: #f9ad00;
+  --color-btn-primary-hover: #d97706;
+  --color-btn-secondary: #2e7d32;
+  --color-btn-secondary-hover: #15803d;
+  --color-input-bg: #374151;
+  --color-input-border: #4b5563;
+  --font-heading: 'Bebas Neue', sans-serif;
+  --font-body: 'Poppins', sans-serif;
+  --border-radius: 12px;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  font-family: var(--font-body);
+  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-2) 50%, var(--color-bg) 100%);
   min-height: 100vh;
-  color: white;
+  color: var(--color-text);
 }
 
-.font-display { font-family: 'Bebas Neue', sans-serif; }
+.font-display { font-family: var(--font-heading); }
 
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #1e293b; }
-::-webkit-scrollbar-thumb { background: #f9ad00; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #d97706; }
+::-webkit-scrollbar-track { background: var(--color-scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--color-scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
 
 .glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-card);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-card-border);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #f9ad00, #ff6b00);
+  background: linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .btn-primary {
-  @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-primary-500/50;
+  background: linear-gradient(135deg, var(--color-btn-primary), var(--color-btn-primary-hover));
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  border-radius: var(--border-radius);
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
-  @apply bg-gradient-to-r from-secondary-600 to-secondary-700 hover:from-secondary-700 hover:to-secondary-800 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 transform hover:scale-105;
+  background: linear-gradient(135deg, var(--color-btn-secondary), var(--color-btn-secondary-hover));
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  border-radius: var(--border-radius);
+  transition: all 0.3s;
+}
+.btn-secondary:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
 }
 
 .card {
-  @apply glass rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10;
+  @apply glass p-6 transition-all duration-300;
+  border-radius: var(--border-radius);
+}
+.card:hover {
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
 .input {
-  @apply w-full bg-dark-200/50 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all duration-300;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--border-radius);
+  padding: 0.75rem 1rem;
+  color: var(--color-text);
+  transition: all 0.3s;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.navbar-dynamic {
+  background: var(--color-navbar-bg);
+  backdrop-filter: blur(20px);
 }
 
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
