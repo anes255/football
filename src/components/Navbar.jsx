@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Home, Trophy, Calendar, Award, User, LogOut, Shield, Globe, Flag } from 'lucide-react';
+import { Menu, X, Home, Trophy, Calendar, Award, User, LogOut, Shield, Globe, Flag, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -36,12 +36,13 @@ const Navbar = () => {
     { to: '/equipes', label: 'Équipes', icon: Flag },
     { to: '/matchs', label: 'Matchs', icon: Calendar },
     { to: '/classement', label: 'Classement', icon: Award },
+    { to: '/gagnants-du-jour', label: 'Du Jour', icon: Star },
   ];
 
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-xl border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 navbar-dynamic border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
@@ -79,7 +80,7 @@ const Navbar = () => {
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:hidden bg-gray-900/95 backdrop-blur-xl border-b border-white/10">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:hidden navbar-dynamic border-b border-white/10">
             <div className="px-4 py-4 space-y-2">
               {navLinks.map(({ to, label, icon: Icon }) => (
                 <Link key={to} to={to} onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${isActive(to) ? 'bg-primary-500/20 text-primary-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
