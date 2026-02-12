@@ -225,6 +225,7 @@ const TournamentDetailPage = () => {
                 className="w-full bg-gray-800 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-primary-500"
               >
                 <option value="matches">Matchs</option>
+                {tournamentTeams.length > 0 && <option value="standings">Classement Groupes</option>}
                 {tournamentTeams.length > 0 && <option value="teams">Équipes</option>}
                 {user && <option value="winner">Vainqueur</option>}
                 {user && tournament?.enable_player_predictions && <option value="players">Joueurs</option>}
@@ -235,77 +236,99 @@ const TournamentDetailPage = () => {
           {/* Tournament Predictions - Best Player & Goal Scorer (own tab) */}
           {activeTab === 'players' && user && tournament?.enable_player_predictions && <TournamentPredictions tournamentId={id} tournamentStarted={tournamentStarted} />}
 
-          {activeTab === 'teams' && (
+          {/* Standings Tab - Team Rankings per Group */}
+          {activeTab === 'standings' && (
             <div className="space-y-6">
               {Object.keys(standings).length > 0 ? (
                 Object.entries(standings).map(([group, teams]) => (
                   <div key={group} className="card">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center space-x-2">
-                      <Users className="w-5 h-5 text-primary-400" />
+                      <Trophy className="w-5 h-5 text-yellow-500" />
                       <span>{group}</span>
                     </h3>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-gray-400 text-xs border-b border-white/10">
-                            <th className="text-left py-2 pr-2">#</th>
+                            <th className="text-left py-2 pr-2 w-6">#</th>
                             <th className="text-left py-2">Équipe</th>
-                            <th className="text-center py-2 px-1">MJ</th>
-                            <th className="text-center py-2 px-1">V</th>
-                            <th className="text-center py-2 px-1">N</th>
-                            <th className="text-center py-2 px-1">D</th>
-                            <th className="text-center py-2 px-1 hidden sm:table-cell">BP</th>
-                            <th className="text-center py-2 px-1 hidden sm:table-cell">BC</th>
-                            <th className="text-center py-2 px-1">+/-</th>
-                            <th className="text-center py-2 px-1 font-bold">Pts</th>
+                            <th className="text-center py-2 w-8">MJ</th>
+                            <th className="text-center py-2 w-8">V</th>
+                            <th className="text-center py-2 w-8">N</th>
+                            <th className="text-center py-2 w-8">D</th>
+                            <th className="text-center py-2 w-8 hidden sm:table-cell">BP</th>
+                            <th className="text-center py-2 w-8 hidden sm:table-cell">BC</th>
+                            <th className="text-center py-2 w-10">+/-</th>
+                            <th className="text-center py-2 w-10 font-bold text-white">Pts</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {teams.map((team, idx) => (
-                            <tr key={team.team_id} className={`border-b border-white/5 ${idx < 2 ? 'bg-green-500/5' : ''}`}>
-                              <td className="py-2.5 pr-2 text-gray-400 font-medium">{idx + 1}</td>
-                              <td className="py-2.5">
-                                <div className="flex items-center space-x-2">
-                                  {renderFlag(team.flag_url, team.name)}
-                                  <span className="text-white font-medium truncate">{team.name}</span>
-                                </div>
-                              </td>
-                              <td className="text-center py-2.5 text-gray-300">{team.played}</td>
-                              <td className="text-center py-2.5 text-green-400">{team.won}</td>
-                              <td className="text-center py-2.5 text-yellow-400">{team.drawn}</td>
-                              <td className="text-center py-2.5 text-red-400">{team.lost}</td>
-                              <td className="text-center py-2.5 text-gray-300 hidden sm:table-cell">{team.gf}</td>
-                              <td className="text-center py-2.5 text-gray-300 hidden sm:table-cell">{team.ga}</td>
-                              <td className={`text-center py-2.5 font-medium ${team.gd > 0 ? 'text-green-400' : team.gd < 0 ? 'text-red-400' : 'text-gray-400'}`}>{team.gd > 0 ? '+' : ''}{team.gd}</td>
-                              <td className="text-center py-2.5 text-white font-bold text-base">{team.points}</td>
-                            </tr>
-                          ))}
+                          {teams.map((team, idx) => {
+                            const totalTeams = teams.length;
+                            const qualifyCount = Math.max(2, Math.floor(totalTeams / 2));
+                            const isQualified = idx < qualifyCount;
+                            const isEliminated = idx >= totalTeams - Math.floor(totalTeams / 2) && team.played > 0;
+                            return (
+                              <tr key={team.team_id} className={`border-b border-white/5 ${isQualified && team.played > 0 ? 'bg-green-500/10' : isEliminated ? 'bg-red-500/5' : ''}`}>
+                                <td className="py-3 pr-2">
+                                  <span className={`text-sm font-bold ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : 'text-gray-500'}`}>{idx + 1}</span>
+                                </td>
+                                <td className="py-3">
+                                  <div className="flex items-center space-x-2">
+                                    {renderFlag(team.flag_url, team.name)}
+                                    <span className="text-white font-medium text-sm truncate">{team.name}</span>
+                                  </div>
+                                </td>
+                                <td className="text-center py-3 text-gray-300">{team.played}</td>
+                                <td className="text-center py-3 text-green-400 font-medium">{team.won}</td>
+                                <td className="text-center py-3 text-yellow-400">{team.drawn}</td>
+                                <td className="text-center py-3 text-red-400">{team.lost}</td>
+                                <td className="text-center py-3 text-gray-300 hidden sm:table-cell">{team.gf}</td>
+                                <td className="text-center py-3 text-gray-300 hidden sm:table-cell">{team.ga}</td>
+                                <td className={`text-center py-3 font-medium ${team.gd > 0 ? 'text-green-400' : team.gd < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                  {team.gd > 0 ? '+' : ''}{team.gd}
+                                </td>
+                                <td className="text-center py-3 text-white font-bold text-lg">{team.points}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                     {teams.some(t => t.played > 0) && (
-                      <div className="mt-2 flex items-center space-x-2 text-xs text-gray-500">
-                        <div className="w-3 h-3 bg-green-500/20 rounded"></div>
-                        <span>Qualifié</span>
+                      <div className="mt-3 pt-3 border-t border-white/10 flex items-center space-x-4 text-xs">
+                        <div className="flex items-center space-x-1.5"><div className="w-3 h-3 bg-green-500/30 rounded border border-green-500/50"></div><span className="text-gray-400">Qualifié</span></div>
+                        <div className="flex items-center space-x-1.5"><div className="w-3 h-3 bg-red-500/20 rounded border border-red-500/30"></div><span className="text-gray-400">Éliminé</span></div>
                       </div>
                     )}
                   </div>
                 ))
               ) : (
-                Object.entries(groupedTeams).map(([group, teams]) => (
-                  <div key={group} className="card">
-                    <h3 className="text-lg font-bold text-white mb-4">{group}</h3>
-                    <div className="grid md:grid-cols-2 gap-3">
-                      {teams.map(team => (
-                        <div key={team.team_id} className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg">
-                          {renderFlag(team.flag_url, team.name)}
-                          <span className="text-white font-medium">{team.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
+                <div className="card text-center py-12">
+                  <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 text-lg">Aucun classement disponible</p>
+                  <p className="text-gray-500 text-sm mt-1">Les classements apparaîtront une fois les matchs de groupe terminés</p>
+                </div>
               )}
+            </div>
+          )}
+
+          {/* Teams Tab - Simple team list */}
+          {activeTab === 'teams' && (
+            <div className="space-y-6">
+              {Object.entries(groupedTeams).map(([group, teams]) => (
+                <div key={group} className="card">
+                  <h3 className="text-lg font-bold text-white mb-4">{group}</h3>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {teams.map(team => (
+                      <div key={team.team_id} className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg">
+                        {renderFlag(team.flag_url, team.name)}
+                        <span className="text-white font-medium">{team.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
