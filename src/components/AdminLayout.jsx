@@ -1,14 +1,14 @@
-import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Trophy, Users, Calendar, Settings, Flag, Home, LayoutDashboard, Award, User } from 'lucide-react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { Trophy, Users, Calendar, Settings, Flag, Home, LayoutDashboard, Award } from 'lucide-react';
 
 const AdminLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const adminLinks = [
     { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { path: '/admin/tournois', label: 'Tournois', icon: Trophy },
     { path: '/admin/equipes', label: 'Équipes', icon: Flag },
-    { path: '/admin/joueurs', label: 'Joueurs', icon: User },
     { path: '/admin/matchs', label: 'Matchs', icon: Calendar },
     { path: '/admin/utilisateurs', label: 'Utilisateurs', icon: Users },
     { path: '/admin/scoring', label: 'Scoring', icon: Award },
@@ -19,6 +19,8 @@ const AdminLayout = () => {
     if (exact) {
       return location.pathname === path;
     }
+    // For non-exact matches, check if current path starts with the link path
+    // but avoid matching /admin for /admin/equipes etc
     if (path === '/admin') {
       return location.pathname === '/admin';
     }
@@ -63,23 +65,16 @@ const AdminLayout = () => {
       </div>
 
       {/* Mobile Admin Nav */}
-      <div className="md:hidden bg-gray-800/50 border-b border-white/10 px-4 py-3 overflow-x-auto">
-        <div className="flex space-x-2">
+      <div className="md:hidden bg-gray-800/50 border-b border-white/10 px-4 py-3">
+        <select
+          value={adminLinks.find(l => isActive(l.path, l.exact))?.path || '/admin'}
+          onChange={(e) => navigate(e.target.value)}
+          className="w-full bg-gray-700 border border-gray-600 rounded-xl py-2.5 px-4 text-white text-sm focus:outline-none focus:border-primary-500"
+        >
           {adminLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                isActive(link.path, link.exact)
-                  ? 'bg-primary-500/20 text-primary-400'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <link.icon className="w-4 h-4" />
-              <span className="text-sm">{link.label}</span>
-            </Link>
+            <option key={link.path} value={link.path}>{link.label}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* Main Content */}
