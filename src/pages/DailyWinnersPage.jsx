@@ -7,7 +7,10 @@ import UserPredictionsModal from '../components/UserPredictionsModal';
 const DailyWinnersPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
   const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => { fetchData(); }, [selectedDate]);
@@ -21,16 +24,21 @@ const DailyWinnersPage = () => {
     finally { setLoading(false); }
   };
 
+  const getLocalDate = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+
   const changeDate = (offset) => {
-    const d = new Date(selectedDate);
+    const d = new Date(selectedDate + 'T12:00:00');
     d.setDate(d.getDate() + offset);
-    const today = new Date().toISOString().split('T')[0];
-    if (d.toISOString().split('T')[0] <= today) {
-      setSelectedDate(d.toISOString().split('T')[0]);
+    const newDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (newDate <= getLocalDate()) {
+      setSelectedDate(newDate);
     }
   };
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === getLocalDate();
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr + 'T12:00:00');
