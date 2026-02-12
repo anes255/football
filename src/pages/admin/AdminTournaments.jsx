@@ -122,7 +122,9 @@ const AdminTournaments = () => {
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Nb équipes</label>
-                <input type="number" min="2" max="64" value={formData.max_teams} onChange={(e) => setFormData({ ...formData, max_teams: parseInt(e.target.value) || 32 })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" />
+                <select value={formData.max_teams} onChange={(e) => setFormData({ ...formData, max_teams: parseInt(e.target.value) })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm">
+                  {[2,4,6,8,10,12,16,20,24,32,48,64].map(n => <option key={n} value={n}>{n} équipes</option>)}
+                </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
