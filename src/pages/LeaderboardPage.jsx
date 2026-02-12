@@ -156,23 +156,17 @@ const LeaderboardPage = () => {
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : index === 2 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white'}`}>
                           {player.name.charAt(0).toUpperCase()}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-white font-semibold flex items-center space-x-2">
-                            <span>{player.name}</span>
-                            {user && player.id === user.id && <span className="text-xs text-primary-400">(Vous)</span>}
+                            <span className="truncate">{player.name}</span>
+                            {user && player.id === user.id && <span className="text-xs text-primary-400 shrink-0">(Vous)</span>}
                           </p>
-                          <p className="text-xs text-gray-400">
-                            {player.total_predictions || 0} pronos
-                            {player.correct_predictions !== undefined && (
-                              <> · <span className="text-green-400">{player.correct_predictions} correct{player.correct_predictions !== 1 ? 's' : ''}</span></>
+                          <div className="text-xs text-gray-400 space-y-0.5 mt-0.5">
+                            <p>{player.total_predictions || 0} pronos{player.completed_predictions > 0 && <> · {((player.correct_predictions / player.completed_predictions) * 100).toFixed(0)}%</>}</p>
+                            {player.correct_predictions > 0 && (
+                              <p className="text-green-400">{player.correct_predictions} correct{player.correct_predictions !== 1 ? 's' : ''}{player.exact_predictions > 0 && <> · ⭐{player.exact_predictions} exact{player.exact_predictions !== 1 ? 's' : ''}</>}</p>
                             )}
-                            {player.exact_predictions > 0 && (
-                              <> · <span className="text-emerald-400">⭐{player.exact_predictions} exact</span></>
-                            )}
-                            {player.completed_predictions > 0 && (
-                              <> · {((player.correct_predictions / player.completed_predictions) * 100).toFixed(0)}%</>
-                            )}
-                          </p>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
