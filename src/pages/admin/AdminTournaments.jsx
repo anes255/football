@@ -65,7 +65,7 @@ const AdminTournaments = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Supprimer ce tournoi et toutes ses données (matchs, pronostics, joueurs) ?')) return;
+    if (!confirm('Supprimer ce tournoi et toutes ses données ?')) return;
     try {
       await tournamentsAPI.delete(id);
       toast.success('Tournoi supprimé');
@@ -74,7 +74,7 @@ const AdminTournaments = () => {
   };
 
   const handleStart = async (tournament) => {
-    if (!confirm(`Démarrer "${tournament.name}" ? Les utilisateurs ne pourront plus prédire le vainqueur ni les joueurs.`)) return;
+    if (!confirm(`Démarrer "${tournament.name}" ?`)) return;
     try {
       await adminAPI.startTournament(tournament.id);
       toast.success('Tournoi démarré !');
@@ -90,137 +90,134 @@ const AdminTournaments = () => {
 
   const getFormatLabel = (format) => formats.find(f => f.value === format)?.label || format;
 
-  const renderFlag = (flagUrl, name) => {
-    if (!flagUrl) return <span className="text-lg">🏳️</span>;
-    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
-    return <span className="text-lg">{flagUrl}</span>;
-  };
-
   if (loading) return <div className="flex items-center justify-center p-12"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"></div></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white flex items-center space-x-3">
-          <Trophy className="w-8 h-8 text-yellow-500" /><span>Tournois</span>
+        <h1 className="text-xl font-bold text-white flex items-center space-x-2">
+          <Trophy className="w-5 h-5 text-yellow-500" /><span>Tournois</span>
         </h1>
-        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32, enable_player_predictions: false }); }} className="btn-primary flex items-center space-x-2">
-          <Plus className="w-5 h-5" /><span>Nouveau</span>
+        <button onClick={() => { setShowForm(true); setEditingId(null); setFormData({ name: '', description: '', start_date: '', end_date: '', logo_url: '', is_active: true, format: 'groups_4', max_teams: 32, enable_player_predictions: false }); }} className="btn-primary flex items-center space-x-1.5 text-sm px-3 py-2">
+          <Plus className="w-4 h-4" /><span>Nouveau</span>
         </button>
       </div>
 
+      {/* Create/Edit Form */}
       {showForm && (
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="card">
-          <h2 className="text-xl font-bold text-white mb-4">{editingId ? 'Modifier' : 'Nouveau'} Tournoi</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="card">
+          <h2 className="text-lg font-bold text-white mb-3">{editingId ? 'Modifier' : 'Nouveau'} Tournoi</h2>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Nom</label>
+              <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nom</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" required />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Format</label>
-                <select value={formData.format} onChange={(e) => setFormData({ ...formData, format: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white">
+                <label className="block text-xs text-gray-400 mb-1">Format</label>
+                <select value={formData.format} onChange={(e) => setFormData({ ...formData, format: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm">
                   {formats.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nombre d'équipes</label>
-                <input type="number" min="2" max="64" value={formData.max_teams} onChange={(e) => setFormData({ ...formData, max_teams: parseInt(e.target.value) || 32 })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" />
-                <p className="text-xs text-gray-500 mt-1">Ex: 8, 10, 12, 16, 24, 32</p>
+                <label className="block text-xs text-gray-400 mb-1">Nb équipes</label>
+                <input type="number" min="2" max="64" value={formData.max_teams} onChange={(e) => setFormData({ ...formData, max_teams: parseInt(e.target.value) || 32 })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Date début</label>
+                <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Date début</label>
-                <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Date fin</label>
-                <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" />
+                <label className="block text-xs text-gray-400 mb-1">Date fin</label>
+                <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" />
               </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Description</label>
-              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" rows="2" />
+              <label className="block text-xs text-gray-400 mb-1">Description</label>
+              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" rows="2" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Logo URL</label>
-              <input type="text" value={formData.logo_url} onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white" />
+              <label className="block text-xs text-gray-400 mb-1">Logo URL</label>
+              <input type="text" value={formData.logo_url} onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" />
             </div>
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} className="w-4 h-4" />
-                <label className="text-gray-400">Actif</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input type="checkbox" checked={formData.enable_player_predictions} onChange={(e) => setFormData({ ...formData, enable_player_predictions: e.target.checked })} className="w-4 h-4" />
-                <label className="text-gray-400">Activer prédictions joueurs (meilleur joueur / buteur)</label>
-              </div>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} className="w-4 h-4 rounded" />
+                <span className="text-gray-400 text-sm">Actif</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" checked={formData.enable_player_predictions} onChange={(e) => setFormData({ ...formData, enable_player_predictions: e.target.checked })} className="w-4 h-4 rounded" />
+                <span className="text-gray-400 text-sm">Prédictions joueurs</span>
+              </label>
             </div>
-            <div className="flex space-x-3">
-              <button type="submit" className="btn-primary">{editingId ? 'Modifier' : 'Créer'}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annuler</button>
+            <div className="flex space-x-3 pt-1">
+              <button type="submit" className="btn-primary text-sm px-4 py-2">{editingId ? 'Modifier' : 'Créer'}</button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary text-sm px-4 py-2">Annuler</button>
             </div>
           </form>
         </motion.div>
       )}
 
-      <div className="space-y-4">
+      {/* Tournament List */}
+      <div className="space-y-3">
         {tournaments.length === 0 ? (
           <div className="card text-center py-12">
-            <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <Trophy className="w-14 h-14 text-gray-600 mx-auto mb-3" />
             <p className="text-gray-400">Aucun tournoi</p>
           </div>
-        ) : tournaments.map(tournament => (
-          <motion.div key={tournament.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+        ) : tournaments.map(tournament => {
+          const status = getTournamentStatus(tournament);
+          return (
+            <motion.div key={tournament.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white/5 border border-white/10 rounded-xl p-3.5">
+              {/* Row 1: Logo + Name + Badge */}
+              <div className="flex items-center space-x-3">
                 {tournament.logo_url ? (
-                  <img src={tournament.logo_url} alt={tournament.name} className="w-12 h-12 rounded-lg object-cover" />
+                  <img src={tournament.logo_url} alt={tournament.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                    <Trophy className="w-6 h-6 text-white" />
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shrink-0">
+                    <Trophy className="w-4 h-4 text-white" />
                   </div>
                 )}
-                <div>
-                  <h3 className="text-lg font-bold text-white">{tournament.name}</h3>
-                  <div className="flex items-center space-x-3 text-sm text-gray-400">
-                    <span>{getFormatLabel(tournament.format)}</span>
-                    <span>•</span>
-                    <span>{tournament.max_teams || 32} équipes max</span>
-                    <span>•</span>
-                    <span>{tournament.team_count || 0} assignées</span>
-                    <span>•</span>
-                    <span>{tournament.match_count || 0} matchs</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-white text-sm truncate">{tournament.name}</h3>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 leading-tight ${status.color}`}>{status.label}</span>
                   </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {getFormatLabel(tournament.format)} · {tournament.team_count || 0}/{tournament.max_teams || 32} éq. · {tournament.match_count || 0} matchs
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-                {(() => { const s = getTournamentStatus(tournament); return (
-                  <span className={`text-xs px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
-                ); })()}
+
+              {/* Row 2: Actions - left side labeled, right side icons */}
+              <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-white/5">
                 {!tournament.has_started && tournament.is_active && (
-                  <button onClick={() => handleStart(tournament)} className="p-2 hover:bg-green-500/20 rounded-lg text-green-400" title="Démarrer le tournoi">
-                    <Play className="w-5 h-5" />
+                  <button onClick={() => handleStart(tournament)} className="flex items-center space-x-1 px-2 py-1 rounded-md bg-green-500/10 text-green-400 text-[11px] font-medium">
+                    <Play className="w-3 h-3" /><span>Démarrer</span>
                   </button>
                 )}
-                <button onClick={() => setShowGroupsModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-blue-400" title="Gérer groupes">
-                  <Users className="w-5 h-5" />
+                <button onClick={() => setShowGroupsModal(tournament)} className="flex items-center space-x-1 px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 text-[11px] font-medium">
+                  <Users className="w-3 h-3" /><span>Groupes</span>
                 </button>
                 {tournament.has_started && tournament.is_active && (
-                  <button onClick={() => setShowWinnerModal(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-yellow-400" title="Déclarer vainqueur">
-                    <Crown className="w-5 h-5" />
+                  <button onClick={() => setShowWinnerModal(tournament)} className="flex items-center space-x-1 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-400 text-[11px] font-medium">
+                    <Crown className="w-3 h-3" /><span>Vainqueur</span>
                   </button>
                 )}
-                <button onClick={() => handleEdit(tournament)} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
-                  <Edit className="w-5 h-5" />
+                <div className="flex-1" />
+                <button onClick={() => handleEdit(tournament)} className="p-1.5 hover:bg-white/10 rounded-md text-gray-400">
+                  <Edit className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => handleDelete(tournament.id)} className="p-2 hover:bg-white/10 rounded-lg text-red-400">
-                  <Trash2 className="w-5 h-5" />
+                <button onClick={() => handleDelete(tournament.id)} className="p-1.5 hover:bg-red-500/10 rounded-md text-red-400">
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
 
       {showGroupsModal && <GroupsModal tournament={showGroupsModal} teams={teams} formats={formats} onClose={() => { setShowGroupsModal(null); fetchData(); }} />}
@@ -237,10 +234,8 @@ const WinnerModal = ({ tournament, teams, onClose }) => {
 
   useEffect(() => {
     const fetch = async () => {
-      try {
-        const res = await adminAPI.getTournamentTeams(tournament.id);
-        setTournamentTeams(res.data || []);
-      } catch (e) { console.error(e); }
+      try { setTournamentTeams((await adminAPI.getTournamentTeams(tournament.id)).data || []); }
+      catch (e) { console.error(e); }
       finally { setLoading(false); }
     };
     fetch();
@@ -268,36 +263,34 @@ const WinnerModal = ({ tournament, teams, onClose }) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gray-800 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Vainqueur - {tournament.name}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5 text-gray-400" /></button>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-hidden sm:mx-4" onClick={e => e.stopPropagation()}>
+        <div className="p-4 border-b border-white/10 flex justify-between items-center">
+          <h2 className="text-base font-bold text-white truncate pr-2">Vainqueur - {tournament.name}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg shrink-0"><X className="w-5 h-5 text-gray-400" /></button>
         </div>
-        <div className="p-6">
+        <div className="p-4 overflow-y-auto max-h-[calc(80vh-60px)]">
           {loading ? (
-            <div className="text-center py-8"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div></div>
+            <div className="text-center py-8"><div className="animate-spin w-7 h-7 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div></div>
           ) : availableTeams.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">Aucune équipe dans ce tournoi</p>
+            <p className="text-gray-400 text-center py-8 text-sm">Aucune équipe dans ce tournoi</p>
           ) : (
             <>
-              <div className="mb-6">
-                <label className="block text-sm text-gray-400 mb-3">Sélectionnez l'équipe gagnante</label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {availableTeams.map(team => (
-                    <label key={team.id} className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${selectedWinner === team.id.toString() ? 'bg-yellow-500/20 border border-yellow-500/50' : 'bg-white/5 hover:bg-white/10 border border-transparent'}`}>
-                      <input type="radio" name="winner" value={team.id} checked={selectedWinner === team.id.toString()} onChange={(e) => setSelectedWinner(e.target.value)} className="sr-only" />
-                      {renderFlag(team.flag_url, team.name)}
-                      <span className="text-white font-medium flex-1">{team.name}</span>
-                      {selectedWinner === team.id.toString() && <Trophy className="w-5 h-5 text-yellow-400" />}
-                    </label>
-                  ))}
-                </div>
+              <p className="text-xs text-gray-400 mb-3">Sélectionnez l'équipe gagnante</p>
+              <div className="space-y-1.5 mb-4 max-h-56 overflow-y-auto">
+                {availableTeams.map(team => (
+                  <label key={team.id} className={`flex items-center space-x-3 p-2.5 rounded-lg cursor-pointer transition-colors ${selectedWinner === team.id.toString() ? 'bg-yellow-500/20 border border-yellow-500/50' : 'bg-white/5 hover:bg-white/10 border border-transparent'}`}>
+                    <input type="radio" name="winner" value={team.id} checked={selectedWinner === team.id.toString()} onChange={(e) => setSelectedWinner(e.target.value)} className="sr-only" />
+                    {renderFlag(team.flag_url, team.name)}
+                    <span className="text-white font-medium flex-1 text-sm">{team.name}</span>
+                    {selectedWinner === team.id.toString() && <Trophy className="w-4 h-4 text-yellow-400" />}
+                  </label>
+                ))}
               </div>
               <div className="flex space-x-3">
-                <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
-                <button onClick={handleAwardWinner} disabled={!selectedWinner || awarding} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center space-x-2">
-                  {awarding ? <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full" /> : <><Crown className="w-5 h-5" /><span>Déclarer</span></>}
+                <button onClick={onClose} className="btn-secondary flex-1 text-sm py-2">Annuler</button>
+                <button onClick={handleAwardWinner} disabled={!selectedWinner || awarding} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 px-4 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center space-x-1.5 text-sm">
+                  {awarding ? <div className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" /> : <><Crown className="w-4 h-4" /><span>Déclarer</span></>}
                 </button>
               </div>
             </>
@@ -314,7 +307,6 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
   const [saving, setSaving] = useState(false);
 
   const format = formats.find(f => f.value === tournament.format);
-  // Use tournament.max_teams to determine number of groups if format is custom
   const numGroups = format?.groups || Math.ceil((tournament.max_teams || 32) / 4);
   const groupLetters = 'ABCDEFGHIJKLMNOP'.split('').slice(0, numGroups);
 
@@ -332,11 +324,8 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
     const numericTeamId = parseInt(teamId);
     const existing = tournamentTeams.find(t => t.team_id === numericTeamId);
     if (existing) {
-      if (groupName === '') {
-        setTournamentTeams(tournamentTeams.filter(t => t.team_id !== numericTeamId));
-      } else {
-        setTournamentTeams(tournamentTeams.map(t => t.team_id === numericTeamId ? { ...t, group_name: groupName } : t));
-      }
+      if (groupName === '') setTournamentTeams(tournamentTeams.filter(t => t.team_id !== numericTeamId));
+      else setTournamentTeams(tournamentTeams.map(t => t.team_id === numericTeamId ? { ...t, group_name: groupName } : t));
     } else if (groupName) {
       const team = teams.find(t => t.id === numericTeamId);
       if (team) setTournamentTeams([...tournamentTeams, { team_id: numericTeamId, group_name: groupName, name: team.name, flag_url: team.flag_url }]);
@@ -349,9 +338,8 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
     setSaving(true);
     try {
       const teamsData = tournamentTeams.filter(t => t.team_id && t.group_name).map(t => ({ teamId: parseInt(t.team_id), groupName: t.group_name }));
-      if (teamsData.length === 0) { toast.error('Aucune équipe à sauvegarder'); setSaving(false); return; }
-      // Check max_teams
-      if (teamsData.length > (tournament.max_teams || 32)) { toast.error(`Maximum ${tournament.max_teams || 32} équipes pour ce tournoi`); setSaving(false); return; }
+      if (teamsData.length === 0) { toast.error('Aucune équipe'); setSaving(false); return; }
+      if (teamsData.length > (tournament.max_teams || 32)) { toast.error(`Max ${tournament.max_teams || 32} équipes`); setSaving(false); return; }
       await adminAPI.bulkAddTournamentTeams(tournament.id, { teams: teamsData });
       toast.success(`${teamsData.length} équipes sauvegardées`);
       onClose();
@@ -360,66 +348,76 @@ const GroupsModal = ({ tournament, teams, formats, onClose }) => {
   };
 
   const renderFlag = (flagUrl, name) => {
-    if (!flagUrl) return <span className="text-lg">🏳️</span>;
-    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) return <img src={flagUrl} alt={name} className="w-6 h-4 object-cover rounded" />;
-    return <span className="text-lg">{flagUrl}</span>;
+    if (!flagUrl) return <span className="text-sm">🏳️</span>;
+    if (flagUrl.startsWith('data:') || flagUrl.startsWith('http')) return <img src={flagUrl} alt={name} className="w-5 h-3.5 object-cover rounded" />;
+    return <span className="text-sm">{flagUrl}</span>;
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gray-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Groupes - {tournament.name}</h2>
-            <p className="text-gray-400 text-sm">{format?.label || tournament.format} • {tournamentTeams.length}/{tournament.max_teams || 32} équipes</p>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden sm:mx-4" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-3.5 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-white truncate pr-2">Groupes – {tournament.name}</h2>
+            <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg shrink-0"><X className="w-5 h-5 text-gray-400" /></button>
           </div>
-          <div className="flex items-center space-x-3">
-            <button onClick={saveGroups} disabled={saving} className="btn-primary flex items-center space-x-2">
-              {saving ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Save className="w-4 h-4" />}
-              <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
+          <div className="flex items-center justify-between mt-1.5">
+            <p className="text-[11px] text-gray-400">{tournamentTeams.length}/{tournament.max_teams || 32} équipes</p>
+            <button onClick={saveGroups} disabled={saving} className="btn-primary flex items-center space-x-1 text-xs px-3 py-1.5">
+              {saving ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" /> : <Save className="w-3 h-3" />}
+              <span>{saving ? '...' : 'Sauvegarder'}</span>
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-6 h-6 text-gray-400" /></button>
           </div>
         </div>
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-90px)] sm:max-h-[calc(85vh-90px)]">
           {loading ? (
-            <div className="text-center py-12"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div></div>
+            <div className="text-center py-12"><div className="animate-spin w-7 h-7 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div></div>
           ) : (
             <>
-              <div className="grid md:grid-cols-4 gap-4 mb-8">
-                {groupLetters.map(letter => {
-                  const groupTeams = tournamentTeams.filter(t => t.group_name === letter);
-                  return (
-                    <div key={letter} className="bg-white/5 rounded-xl p-4">
-                      <h3 className="font-bold text-white mb-3">Groupe {letter} ({groupTeams.length})</h3>
-                      {groupTeams.length === 0 ? <p className="text-gray-500 text-sm">Aucune équipe</p> : (
-                        <div className="space-y-2">
-                          {groupTeams.map(team => (
-                            <div key={team.team_id} className="flex items-center space-x-2 text-sm">
-                              {renderFlag(team.flag_url, team.name)}
-                              <span className="text-white">{team.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              {/* Group preview - compact 2-col grid */}
+              <div className="p-3.5 pb-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {groupLetters.map(letter => {
+                    const gt = tournamentTeams.filter(t => t.group_name === letter);
+                    return (
+                      <div key={letter} className="bg-white/5 rounded-lg p-2">
+                        <p className="font-bold text-white text-[11px] mb-1">Gr. {letter} <span className="text-gray-500 font-normal">({gt.length})</span></p>
+                        {gt.length === 0 ? <p className="text-gray-600 text-[10px]">Vide</p> : (
+                          <div className="space-y-0.5">
+                            {gt.map(team => (
+                              <div key={team.team_id} className="flex items-center space-x-1 text-[10px]">
+                                {renderFlag(team.flag_url, team.name)}
+                                <span className="text-gray-300 truncate">{team.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <h3 className="font-bold text-white mb-4">Assigner les équipes ({tournamentTeams.length}/{tournament.max_teams || 32})</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {teams.map(team => (
-                  <div key={team.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      {renderFlag(team.flag_url, team.name)}
-                      <span className="text-white text-sm">{team.name}</span>
+
+              {/* Team list */}
+              <div className="p-3.5 pt-1">
+                <p className="font-bold text-white text-xs mb-2">Assigner les équipes</p>
+                <div className="space-y-1">
+                  {teams.map(team => (
+                    <div key={team.id} className="flex items-center justify-between py-2 px-2.5 bg-white/5 rounded-lg">
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        {renderFlag(team.flag_url, team.name)}
+                        <span className="text-white text-xs truncate">{team.name}</span>
+                      </div>
+                      <select value={getTeamGroup(team.id)} onChange={(e) => handleTeamGroupChange(team.id, e.target.value)} className="bg-gray-700 border border-gray-600 rounded py-1 px-1.5 text-white text-[11px] ml-2 shrink-0 min-w-[60px]">
+                        <option value="">—</option>
+                        {groupLetters.map(letter => <option key={letter} value={letter}>Gr. {letter}</option>)}
+                      </select>
                     </div>
-                    <select value={getTeamGroup(team.id)} onChange={(e) => handleTeamGroupChange(team.id, e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg py-1 px-2 text-white text-sm">
-                      <option value="">-</option>
-                      {groupLetters.map(letter => <option key={letter} value={letter}>Groupe {letter}</option>)}
-                    </select>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </>
           )}
