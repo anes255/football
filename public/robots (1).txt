@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /tournois
+Allow: /matchs
+Allow: /classement
+Allow: /gagnants-du-jour
+Allow: /equipes
+Allow: /connexion
+Allow: /inscription
+
+Disallow: /profil
+Disallow: /admin
+Disallow: /admin/*
+
+Sitemap: https://cspouedseguinfootballpredictions.shop/sitemap.xml
